@@ -278,22 +278,38 @@
     </div>
 
     <div class="grid">
+      <section class="card" id="rosterCard" style="grid-column: 1 / -1;">
+        <h2>Classe (import Pronote)</h2>
+        <div class="row">
+          <div class="field">
+            <label for="classFile">Fichier classe — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
+            <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="btnClearRoster" class="secondary" type="button">Effacer la classe importée</button>
+        </div>
+        <p id="rosterStatus" class="note">Aucune classe importée. Les prénoms démarreur/relayeur ci-dessous proposeront alors les élèves en auto-complétion (Prénom + initiale, ex. « Axel D. »).</p>
+        <div id="rosterList" class="note" style="margin-top:8px;"></div>
+      </section>
+
       <section class="card">
         <h2>Réglages</h2>
 
         <div class="row">
           <div class="field">
             <label for="starterName">Prénom démarreur</label>
-            <input id="starterName" type="text" placeholder="Ex. Axel" autocomplete="off" />
+            <input id="starterName" type="text" placeholder="Ex. Axel" autocomplete="off" list="elevesList" />
           </div>
         </div>
 
         <div class="row">
           <div class="field">
             <label for="relayeurName">Prénom relayeur</label>
-            <input id="relayeurName" type="text" placeholder="Ex. Malo" autocomplete="off" />
+            <input id="relayeurName" type="text" placeholder="Ex. Malo" autocomplete="off" list="elevesList" />
           </div>
         </div>
+        <datalist id="elevesList"></datalist>
 
         <div class="row">
           <div class="field">
@@ -353,6 +369,10 @@
 
   <div class="signature">by Quentin Delisle</div>
 
+  <!-- Lecture des fichiers Excel (.xlsx) pour l'import de classe. Nécessite une connexion internet
+       au moment de l'import uniquement (le CSV, lui, fonctionne toujours hors-ligne). -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+
   <script>
     const $ = (id) => document.getElementById(id);
     const secondsInput = $('seconds');
@@ -376,6 +396,11 @@
     const cameraState = $('cameraState');
     const galleryGrid = $('galleryGrid');
     const galleryEmpty = $('galleryEmpty');
+    const classFile = $('classFile');
+    const btnClearRoster = $('btnClearRoster');
+    const rosterStatus = $('rosterStatus');
+    const rosterList = $('rosterList');
+    const elevesList = $('elevesList');
 
     let stream = null;
     let countdownTimer = null;
@@ -385,9 +410,144 @@
     let photoIndex = 0;
     let galleryItems = [];
     const GALLERY_STORAGE_KEY = 'relais12s_gallery_v2';
+    const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
     const MAX_GALLERY_ITEMS = 24;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
+    let roster = [];
+
+    // ---- Import de classe (Pronote : colonne A = Nom, colonne B = Prénom) ----
+
+    function displayName(nom, prenom) {
+      const n = (nom || '').trim();
+      const p = (prenom || '').trim();
+      const initiale = n ? n.charAt(0).toUpperCase() : '';
+      if (p && initiale) return `${p} ${initiale}.`;
+      return p || n || '';
+    }
+
+    function detectDelimiter(firstLine) {
+      const candidates = [';', '\t', ','];
+      let best = ';';
+      let bestCount = -1;
+      candidates.forEach((c) => {
+        const count = firstLine.split(c).length - 1;
+        if (count > bestCount) { bestCount = count; best = c; }
+      });
+      return best;
+    }
+
+    function parseDelimitedText(text) {
+      const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
+      if (!lines.length) return [];
+      const delim = detectDelimiter(lines[0]);
+      return lines.map((line) => line.split(delim).map((cell) => cell.trim().replace(/^"|"$/g, '')));
+    }
+
+    function looksLikeHeaderRow(row) {
+      const headerWords = ['nom', 'élève', 'eleve', 'élèves', 'eleves', 'last name', 'lastname', 'name'];
+      const first = (row[0] || '').trim().toLowerCase();
+      return headerWords.includes(first);
+    }
+
+    function rowsToRoster(rows) {
+      let data = rows;
+      if (data.length && looksLikeHeaderRow(data[0])) data = data.slice(1);
+      const students = [];
+      data.forEach((cols) => {
+        const nom = (cols[0] || '').toString().trim();
+        const prenom = (cols[1] || '').toString().trim();
+        if (!nom && !prenom) return;
+        students.push({ nom, prenom, display: displayName(nom, prenom) });
+      });
+      students.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
+      return students;
+    }
+
+    function populateElevesDatalist() {
+      elevesList.innerHTML = roster
+        .map((s) => `<option value="${s.display.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></option>`)
+        .join('');
+    }
+
+    function renderRosterStatus() {
+      if (!roster.length) {
+        rosterStatus.textContent = 'Aucune classe importée. Les prénoms démarreur/relayeur ci-dessous proposeront alors les élèves en auto-complétion (Prénom + initiale, ex. « Axel D. »).';
+        rosterList.textContent = '';
+        return;
+      }
+      rosterStatus.textContent = `${roster.length} élève(s) importé(s) — auto-complétion active sur les champs Démarreur/Relayeur.`;
+      rosterList.textContent = roster.map((s) => s.display).join(' · ');
+    }
+
+    function saveRoster() {
+      try {
+        localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
+      } catch (err) {
+        console.warn('Impossible de sauvegarder la classe', err);
+      }
+    }
+
+    function loadRoster() {
+      try {
+        const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) roster = parsed;
+        }
+      } catch (err) {
+        console.warn('Impossible de charger la classe', err);
+        roster = [];
+      }
+      populateElevesDatalist();
+      renderRosterStatus();
+    }
+
+    function setRoster(students) {
+      roster = students;
+      populateElevesDatalist();
+      renderRosterStatus();
+      saveRoster();
+    }
+
+    function clearRoster() {
+      roster = [];
+      try { localStorage.removeItem(ROSTER_STORAGE_KEY); } catch (err) {}
+      populateElevesDatalist();
+      renderRosterStatus();
+      classFile.value = '';
+      setStatus('Classe effacée');
+    }
+
+    async function handleClassFile(file) {
+      if (!file) return;
+      const name = file.name.toLowerCase();
+      try {
+        if (name.endsWith('.xlsx')) {
+          if (typeof XLSX === 'undefined') {
+            alert('La lecture des fichiers Excel (.xlsx) nécessite une connexion internet au premier import. Réessaie en étant connecté, ou exporte ta classe Pronote en CSV.');
+            return;
+          }
+          const buffer = await file.arrayBuffer();
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+          setRoster(rowsToRoster(rows));
+        } else {
+          const text = await file.text();
+          const rows = parseDelimitedText(text);
+          setRoster(rowsToRoster(rows));
+        }
+        if (!roster.length) {
+          setStatus('Aucun élève reconnu dans ce fichier');
+        } else {
+          setStatus(`Classe importée : ${roster.length} élève(s)`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Impossible de lire ce fichier. Vérifie que la colonne A contient le Nom et la colonne B le Prénom.');
+      }
+    }
 
     function fmt(seconds) {
       const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -717,10 +877,13 @@
     btnTestBeep.addEventListener('click', strongBeepPattern);
     btnFullscreen.addEventListener('click', toggleFullscreen);
     btnClearGallery.addEventListener('click', clearGallery);
+    classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
+    btnClearRoster.addEventListener('click', clearRoster);
     window.addEventListener('beforeunload', stopCamera);
 
     updateSeconds(12);
     loadGallery();
+    loadRoster();
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
