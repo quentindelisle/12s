@@ -229,6 +229,36 @@
     }
     .thumb .meta { padding: 8px 10px; font-size: .84rem; color: var(--muted); line-height: 1.3; }
     .note { color: var(--muted); font-size: .94rem; line-height: 1.4; }
+    .ecart-panel { margin-top: 16px; }
+    .ecart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .ecart-btn {
+      appearance: none;
+      cursor: pointer;
+      border-radius: 14px;
+      padding: 12px 6px;
+      font-weight: 800;
+      font-size: .92rem;
+      border: 2px solid transparent;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+    }
+    .ecart-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .ecart-btn.neg { background: rgba(239,68,68,.16); color: #fca5a5; border-color: rgba(239,68,68,.38); }
+    .ecart-btn.neg.active { background: linear-gradient(135deg, #b91c1c, #ef4444); color: #fff; border-color: #fff; }
+    .ecart-btn.pos { background: rgba(34,197,94,.16); color: #86efac; border-color: rgba(34,197,94,.38); }
+    .ecart-btn.pos.active { background: linear-gradient(135deg, #139245, #22c55e); color: #fff; border-color: #fff; }
+    .ecart-btn.target { background: rgba(59,130,246,.16); color: #93c5fd; border-color: rgba(59,130,246,.38); }
+    .ecart-btn.target.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); color: #fff; border-color: #fff; }
+    .ecart-tag { font-weight: 800; }
+    .ecart-tag.neg { color: #f87171; }
+    .ecart-tag.pos { color: #4ade80; }
+    .ecart-tag.target { color: #60a5fa; }
+    .ecart-tag.none { color: var(--muted); font-weight: 700; }
     .hidden { display: none !important; }
     .footer { margin-top: 18px; color: var(--muted); font-size: .85rem; text-align: center; }
     a.dl {
@@ -353,10 +383,19 @@
           <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">Télécharger la dernière photo</a>
         </div>
 
+        <div class="ecart-panel">
+          <h2>Écart à la cible</h2>
+          <p id="ecartHint" class="note">Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.</p>
+          <div id="ecartGrid" class="ecart-grid"></div>
+        </div>
+
         <div class="gallery">
           <div class="row" style="justify-content:space-between;align-items:center;">
             <h2 style="margin:0;">Galerie des photos finish</h2>
-            <button id="btnClearGallery" class="secondary" type="button">Effacer la galerie</button>
+            <div class="row" style="gap:8px;">
+              <button id="btnExportCsv" class="success" type="button">Exporter CSV</button>
+              <button id="btnClearGallery" class="secondary" type="button">Effacer la galerie</button>
+            </div>
           </div>
           <div id="galleryGrid" class="thumb-grid"></div>
           <p id="galleryEmpty" class="note">Aucune photo pour le moment.</p>
@@ -401,6 +440,9 @@
     const rosterStatus = $('rosterStatus');
     const rosterList = $('rosterList');
     const elevesList = $('elevesList');
+    const ecartGrid = $('ecartGrid');
+    const ecartHint = $('ecartHint');
+    const btnExportCsv = $('btnExportCsv');
 
     let stream = null;
     let countdownTimer = null;
@@ -409,12 +451,111 @@
     let takingPhoto = false;
     let photoIndex = 0;
     let galleryItems = [];
+    let currentAttemptIndex = -1;
     const GALLERY_STORAGE_KEY = 'relais12s_gallery_v2';
     const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
     const MAX_GALLERY_ITEMS = 24;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
+    const ECART_VALUES = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
     let roster = [];
+
+    // ---- Notation de l'écart à la cible (plots) ----
+
+    function ecartKind(value) {
+      if (value === 0) return 'target';
+      return value < 0 ? 'neg' : 'pos';
+    }
+
+    function ecartLabel(value) {
+      if (value === null || value === undefined) return 'Non noté';
+      if (value === 0) return 'Cible atteinte';
+      const abs = Math.abs(value);
+      const sign = value > 0 ? '+' : '−';
+      return `${sign}${abs} plot${abs > 1 ? 's' : ''}`;
+    }
+
+    function buildEcartButtons() {
+      ecartGrid.innerHTML = ECART_VALUES.map((v) => {
+        const kind = ecartKind(v);
+        const label = v === 0 ? 'Cible atteinte' : (v > 0 ? `+${v}` : `${v}`);
+        return `<button type="button" class="ecart-btn ${kind}" data-value="${v}">${label}</button>`;
+      }).join('');
+      ecartGrid.querySelectorAll('.ecart-btn').forEach((btn) => {
+        btn.addEventListener('click', () => setEcart(Number(btn.dataset.value)));
+      });
+    }
+
+    function renderEcartPanel() {
+      const hasAttempt = currentAttemptIndex >= 0 && galleryItems[currentAttemptIndex];
+      const currentValue = hasAttempt ? galleryItems[currentAttemptIndex].meta.ecart : null;
+      ecartGrid.querySelectorAll('.ecart-btn').forEach((btn) => {
+        btn.disabled = !hasAttempt;
+        const v = Number(btn.dataset.value);
+        btn.classList.toggle('active', hasAttempt && currentValue === v);
+      });
+      if (!hasAttempt) {
+        ecartHint.textContent = "Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.";
+      } else {
+        const item = galleryItems[currentAttemptIndex];
+        const who = [item.meta.starter, item.meta.relayeur].filter(Boolean).join(' → ');
+        ecartHint.textContent = who
+          ? `Notation en cours pour : ${who} — ${ecartLabel(currentValue)}`
+          : `Notation en cours — ${ecartLabel(currentValue)}`;
+      }
+    }
+
+    function setEcart(value) {
+      if (currentAttemptIndex < 0 || !galleryItems[currentAttemptIndex]) return;
+      galleryItems[currentAttemptIndex].meta.ecart = value;
+      saveGallery();
+      renderEcartPanel();
+      renderGallery({ keepSelection: true });
+    }
+
+    function csvEscape(value) {
+      const s = String(value ?? '');
+      return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+
+    function exportCsv() {
+      if (!galleryItems.length) {
+        alert('Aucune tentative à exporter pour le moment.');
+        return;
+      }
+      const header = ['Date', 'Heure', 'Démarreur', 'Relayeur', 'Décompte (s)', 'Écart (plots)', 'Résultat'];
+      const rows = galleryItems
+        .slice()
+        .reverse() // ordre chronologique dans l'export
+        .map((item) => {
+          const d = item.meta.createdAt ? new Date(item.meta.createdAt) : null;
+          const dateStr = d ? d.toLocaleDateString('fr-FR') : '';
+          const timeStr = d ? d.toLocaleTimeString('fr-FR') : '';
+          const ecart = item.meta.ecart;
+          const ecartNum = (ecart === null || ecart === undefined) ? '' : ecart;
+          return [
+            dateStr,
+            timeStr,
+            item.meta.starter || '',
+            item.meta.relayeur || '',
+            item.meta.duration != null ? item.meta.duration : '',
+            ecartNum,
+            ecartLabel(ecart),
+          ];
+        });
+      const lines = [header, ...rows].map((r) => r.map(csvEscape).join(';'));
+      const csvContent = '﻿' + lines.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+      a.href = url;
+      a.download = `relais12s-resultats-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 
     // ---- Import de classe (Pronote : colonne A = Nom, colonne B = Prénom) ----
 
@@ -450,18 +591,57 @@
       return headerWords.includes(first);
     }
 
+    // Colonne B qui ressemble à une date de naissance (au lieu d'un prénom) : signe que la
+    // colonne A contient "NOM Prénom" combinés (cas Pronote fréquent).
+    function isDateLike(value) {
+      if (value instanceof Date) return true;
+      const s = (value ?? '').toString().trim();
+      if (!s) return false;
+      return /^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test(s) || /^\d{4}-\d{1,2}-\d{1,2}$/.test(s);
+    }
+
+    function isUpperToken(token) {
+      const letters = token.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+      return letters.length > 0 && letters === letters.toUpperCase() && letters !== letters.toLowerCase();
+    }
+
+    // Sépare "MARTIN Lucas", "DE LA FONTAINE Marie-Claire", etc. : le Nom est la suite de mots
+    // en MAJUSCULES en tête, le Prénom est ce qui suit.
+    function splitNomPrenom(fullValue) {
+      const raw = (fullValue || '').toString().trim().replace(/\s+/g, ' ');
+      if (!raw) return { nom: '', prenom: '' };
+      const tokens = raw.split(' ');
+      let i = 0;
+      while (i < tokens.length && isUpperToken(tokens[i])) i++;
+      if (i === 0) i = 1; // aucun mot en majuscules détecté : on garde quand même le 1er comme Nom
+      if (i === tokens.length) i = tokens.length > 1 ? tokens.length - 1 : 1; // tout en majuscules
+      return { nom: tokens.slice(0, i).join(' '), prenom: tokens.slice(i).join(' ') };
+    }
+
     function rowsToRoster(rows) {
       let data = rows;
       if (data.length && looksLikeHeaderRow(data[0])) data = data.slice(1);
+
+      const sample = data.slice(0, 15).filter((r) => (r[0] || '').toString().trim());
+      const dateLikeCount = sample.filter((r) => isDateLike(r[1])).length;
+      const combinedMode = sample.length > 0 && dateLikeCount / sample.length >= 0.5;
+
       const students = [];
       data.forEach((cols) => {
-        const nom = (cols[0] || '').toString().trim();
-        const prenom = (cols[1] || '').toString().trim();
+        let nom, prenom;
+        if (combinedMode) {
+          const split = splitNomPrenom(cols[0]);
+          nom = split.nom;
+          prenom = split.prenom;
+        } else {
+          nom = (cols[0] || '').toString().trim();
+          prenom = (cols[1] || '').toString().trim();
+        }
         if (!nom && !prenom) return;
         students.push({ nom, prenom, display: displayName(nom, prenom) });
       });
       students.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
-      return students;
+      return { students, combinedMode };
     }
 
     function populateElevesDatalist() {
@@ -519,6 +699,16 @@
       setStatus('Classe effacée');
     }
 
+    function reportImport(students, combinedMode) {
+      if (!students.length) {
+        setStatus('Aucun élève reconnu dans ce fichier');
+        return;
+      }
+      setStatus(combinedMode
+        ? `Classe importée (format "NOM Prénom" détecté dans une seule colonne) : ${students.length} élève(s)`
+        : `Classe importée : ${students.length} élève(s)`);
+    }
+
     async function handleClassFile(file) {
       if (!file) return;
       const name = file.name.toLowerCase();
@@ -529,19 +719,20 @@
             return;
           }
           const buffer = await file.arrayBuffer();
-          const workbook = XLSX.read(buffer, { type: 'array' });
+          const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-          setRoster(rowsToRoster(rows));
+          // raw: false → les dates sont rendues en texte (ex. "12/05/2010") plutôt qu'en numéro de série Excel,
+          // ce qui permet de détecter une colonne B "date de naissance".
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
+          const { students, combinedMode } = rowsToRoster(rows);
+          setRoster(students);
+          reportImport(students, combinedMode);
         } else {
           const text = await file.text();
           const rows = parseDelimitedText(text);
-          setRoster(rowsToRoster(rows));
-        }
-        if (!roster.length) {
-          setStatus('Aucun élève reconnu dans ce fichier');
-        } else {
-          setStatus(`Classe importée : ${roster.length} élève(s)`);
+          const { students, combinedMode } = rowsToRoster(rows);
+          setRoster(students);
+          reportImport(students, combinedMode);
         }
       } catch (err) {
         console.error(err);
@@ -708,18 +899,24 @@
       downloadLink.href = url;
       downloadLink.download = `photo-finish-relais12s-${String(index + 1).padStart(3, '0')}.jpg`;
       downloadLink.classList.remove('hidden');
+      currentAttemptIndex = index;
+      renderEcartPanel();
     }
 
-    function renderGallery() {
+    function renderGallery(options = {}) {
+      const { keepSelection = false } = options;
       galleryGrid.innerHTML = '';
       galleryItems.forEach((item, index) => {
+        const ecart = item.meta.ecart;
+        const hasEcart = ecart !== null && ecart !== undefined;
+        const kind = hasEcart ? ecartKind(ecart) : 'none';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'thumb';
         btn.innerHTML = `
           <img src="${item.url}" alt="Photo finish ${index + 1}" />
           <div class="meta">
-            <div><strong>${item.meta.duration}s</strong></div>
+            <div><strong>${item.meta.duration}s</strong> — <span class="ecart-tag ${kind}">${ecartLabel(ecart)}</span></div>
             <div>Démarreur : ${item.meta.starter || '—'}</div>
             <div>Relayeur : ${item.meta.relayeur || '—'}</div>
           </div>
@@ -728,7 +925,7 @@
         galleryGrid.appendChild(btn);
       });
       galleryEmpty.classList.toggle('hidden', galleryItems.length > 0);
-      if (galleryItems.length > 0 && photo.classList.contains('hidden')) {
+      if (!keepSelection && galleryItems.length > 0 && photo.classList.contains('hidden')) {
         showPhoto(galleryItems[0].url, 0);
       }
     }
@@ -750,7 +947,10 @@
         }
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          galleryItems = parsed.filter(item => item && typeof item.url === 'string' && item.meta).slice(0, MAX_GALLERY_ITEMS);
+          galleryItems = parsed
+            .filter(item => item && typeof item.url === 'string' && item.meta)
+            .slice(0, MAX_GALLERY_ITEMS)
+            .map(item => ({ ...item, meta: { ecart: null, ...item.meta } }));
         }
       } catch (err) {
         console.warn('Impossible de charger la galerie', err);
@@ -762,12 +962,14 @@
     function addToGallery(url, meta) {
       galleryItems.unshift({ url, meta });
       galleryItems = galleryItems.slice(0, MAX_GALLERY_ITEMS);
-      renderGallery();
+      showPhoto(url, 0); // affiche la nouvelle capture et sélectionne l'écart à noter
+      renderGallery({ keepSelection: true });
       saveGallery();
     }
 
     function clearGallery() {
       galleryItems = [];
+      currentAttemptIndex = -1;
       galleryGrid.innerHTML = '';
       galleryEmpty.classList.remove('hidden');
       photo.removeAttribute('src');
@@ -777,6 +979,7 @@
       try {
         localStorage.removeItem(GALLERY_STORAGE_KEY);
       } catch (err) {}
+      renderEcartPanel();
       setStatus('Galerie effacée');
     }
 
@@ -802,9 +1005,8 @@
         const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
 
         photoIndex += 1;
-        showPhoto(url, 0);
-        addToGallery(url, { duration: durationSeconds, starter, relayeur, createdAt: new Date().toISOString() });
-        setStatus('Photo capturée');
+        addToGallery(url, { duration: durationSeconds, starter, relayeur, ecart: null, createdAt: new Date().toISOString() });
+        setStatus('Photo capturée — note l’écart à la cible ci-dessous');
       } catch (err) {
         console.error(err);
         setStatus('Erreur pendant la capture');
@@ -877,12 +1079,15 @@
     btnTestBeep.addEventListener('click', strongBeepPattern);
     btnFullscreen.addEventListener('click', toggleFullscreen);
     btnClearGallery.addEventListener('click', clearGallery);
+    btnExportCsv.addEventListener('click', exportCsv);
     classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
     btnClearRoster.addEventListener('click', clearRoster);
     window.addEventListener('beforeunload', stopCamera);
 
     updateSeconds(12);
+    buildEcartButtons();
     loadGallery();
+    renderEcartPanel();
     loadRoster();
 
     if ('serviceWorker' in navigator) {
