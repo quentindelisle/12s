@@ -1,23 +1,28 @@
 {
-  "name": "Décompte Photo",
-  "short_name": "Décompte Photo",
-  "description": "Compte à rebours réglable avec bip final et capture photo automatique.",
+  "id": "./index.html",
+  "name": "Relais 12s",
+  "short_name": "Relais 12s",
+  "description": "Relais 12s — compte à rebours réglable, capture photo finish automatique, notation de l'écart à la cible et export CSV.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0b1836",
+  "theme_color": "#0b1836",
   "lang": "fr",
   "orientation": "portrait",
   "icons": [
     {
       "src": "./icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

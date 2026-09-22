@@ -94,7 +94,7 @@
     .row + .row { margin-top: 12px; }
     .field { display: grid; gap: 6px; width: 100%; }
     label { font-weight: 800; }
-    input[type="text"] {
+    input[type="text"], select {
       width: 100%;
       background: rgba(3,10,22,.88);
       color: var(--text);
@@ -104,6 +104,16 @@
       font-size: 1rem;
       font-weight: 700;
     }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c5d6f4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 20px;
+      padding-right: 40px;
+    }
+    select option { color: #0b1836; }
     .stepper-row {
       display: grid;
       grid-template-columns: 72px 1fr 72px;
@@ -303,9 +313,14 @@
         </div>
       </div>
       <div class="top-actions">
+        <button id="btnInstall" class="primary hidden" type="button">Installer l'application</button>
         <button id="btnFullscreen" class="warn" type="button">Plein écran</button>
       </div>
     </div>
+    <p id="updateBanner" class="note hidden" style="background:rgba(29,99,255,.16);border:1px solid rgba(93,161,255,.4);border-radius:14px;padding:10px 14px;margin:-4px 0 14px;">
+      Une nouvelle version de l'application est prête —
+      <button id="btnUpdateReload" type="button" class="secondary" style="min-height:32px;padding:6px 12px;margin-left:6px;">Actualiser</button>
+    </p>
 
     <div class="grid">
       <section class="card" id="rosterCard" style="grid-column: 1 / -1;">
@@ -319,7 +334,7 @@
         <div class="row">
           <button id="btnClearRoster" class="secondary" type="button">Effacer la classe importée</button>
         </div>
-        <p id="rosterStatus" class="note">Aucune classe importée. Les prénoms démarreur/relayeur ci-dessous proposeront alors les élèves en auto-complétion (Prénom + initiale, ex. « Axel D. »).</p>
+        <p id="rosterStatus" class="note">Aucune classe importée. Les champs Démarreur/Relayeur ci-dessous permettent alors uniquement la saisie manuelle.</p>
         <div id="rosterList" class="note" style="margin-top:8px;"></div>
       </section>
 
@@ -328,18 +343,19 @@
 
         <div class="row">
           <div class="field">
-            <label for="starterName">Prénom démarreur</label>
-            <input id="starterName" type="text" placeholder="Ex. Axel" autocomplete="off" list="elevesList" />
+            <label for="starterSelect">Démarreur</label>
+            <select id="starterSelect"><option value="">— Choisir dans la classe —</option></select>
+            <input id="starterManual" type="text" placeholder="Prénom (saisie manuelle)" autocomplete="off" class="hidden" style="margin-top:8px;" />
           </div>
         </div>
 
         <div class="row">
           <div class="field">
-            <label for="relayeurName">Prénom relayeur</label>
-            <input id="relayeurName" type="text" placeholder="Ex. Malo" autocomplete="off" list="elevesList" />
+            <label for="relayeurSelect">Relayeur</label>
+            <select id="relayeurSelect"><option value="">— Choisir dans la classe —</option></select>
+            <input id="relayeurManual" type="text" placeholder="Prénom (saisie manuelle)" autocomplete="off" class="hidden" style="margin-top:8px;" />
           </div>
         </div>
-        <datalist id="elevesList"></datalist>
 
         <div class="row">
           <div class="field">
@@ -392,13 +408,13 @@
         <div class="gallery">
           <div class="row" style="justify-content:space-between;align-items:center;">
             <h2 style="margin:0;">Galerie des photos finish</h2>
-            <div class="row" style="gap:8px;">
-              <button id="btnExportCsv" class="success" type="button">Exporter CSV</button>
-              <button id="btnClearGallery" class="secondary" type="button">Effacer la galerie</button>
-            </div>
+            <button id="btnClearGallery" class="secondary" type="button">Effacer la galerie</button>
           </div>
           <div id="galleryGrid" class="thumb-grid"></div>
           <p id="galleryEmpty" class="note">Aucune photo pour le moment.</p>
+          <div class="row" style="margin-top:14px;">
+            <button id="btnExportCsv" class="success full" type="button" disabled>Exporter CSV (toutes les tentatives notées)</button>
+          </div>
         </div>
       </section>
     </div>
@@ -415,8 +431,10 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const secondsInput = $('seconds');
-    const starterNameInput = $('starterName');
-    const relayeurNameInput = $('relayeurName');
+    const starterSelect = $('starterSelect');
+    const starterManual = $('starterManual');
+    const relayeurSelect = $('relayeurSelect');
+    const relayeurManual = $('relayeurManual');
     const btnCamera = $('btnCamera');
     const btnStart = $('btnStart');
     const btnReset = $('btnReset');
@@ -439,10 +457,13 @@
     const btnClearRoster = $('btnClearRoster');
     const rosterStatus = $('rosterStatus');
     const rosterList = $('rosterList');
-    const elevesList = $('elevesList');
     const ecartGrid = $('ecartGrid');
     const ecartHint = $('ecartHint');
     const btnExportCsv = $('btnExportCsv');
+    const btnInstall = $('btnInstall');
+    const updateBanner = $('updateBanner');
+    const btnUpdateReload = $('btnUpdateReload');
+    const MANUAL_OPTION = '__manual__';
 
     let stream = null;
     let countdownTimer = null;
@@ -644,19 +665,43 @@
       return { students, combinedMode };
     }
 
-    function populateElevesDatalist() {
-      elevesList.innerHTML = roster
-        .map((s) => `<option value="${s.display.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></option>`)
-        .join('');
+    function escapeHtml(str) {
+      return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Remplit les deux molettes (Démarreur / Relayeur) avec la classe importée + une option
+    // de saisie manuelle, en conservant la sélection en cours si elle existe toujours.
+    function populateEleveSelects() {
+      [starterSelect, relayeurSelect].forEach((select) => {
+        const previous = select.value;
+        const options = ['<option value="">— Choisir dans la classe —</option>']
+          .concat(roster.map((s) => `<option value="${escapeHtml(s.display)}">${escapeHtml(s.display)}</option>`))
+          .concat([`<option value="${MANUAL_OPTION}">✏️ Saisie manuelle…</option>`]);
+        select.innerHTML = options.join('');
+        const stillExists = previous && (previous === MANUAL_OPTION || roster.some((s) => s.display === previous));
+        select.value = stillExists ? previous : '';
+      });
+    }
+
+    function syncManualVisibility(select, manualInput) {
+      const isManual = select.value === MANUAL_OPTION;
+      manualInput.classList.toggle('hidden', !isManual);
+      if (isManual) manualInput.focus();
+      else manualInput.value = '';
+    }
+
+    function getSelectedName(select, manualInput) {
+      if (select.value === MANUAL_OPTION) return manualInput.value.trim();
+      return select.value;
     }
 
     function renderRosterStatus() {
       if (!roster.length) {
-        rosterStatus.textContent = 'Aucune classe importée. Les prénoms démarreur/relayeur ci-dessous proposeront alors les élèves en auto-complétion (Prénom + initiale, ex. « Axel D. »).';
+        rosterStatus.textContent = 'Aucune classe importée. Les champs Démarreur/Relayeur ci-dessous permettent alors uniquement la saisie manuelle.';
         rosterList.textContent = '';
         return;
       }
-      rosterStatus.textContent = `${roster.length} élève(s) importé(s) — auto-complétion active sur les champs Démarreur/Relayeur.`;
+      rosterStatus.textContent = `${roster.length} élève(s) importé(s) — utilise les molettes Démarreur/Relayeur, ou « Saisie manuelle » en cas de changement.`;
       rosterList.textContent = roster.map((s) => s.display).join(' · ');
     }
 
@@ -679,13 +724,13 @@
         console.warn('Impossible de charger la classe', err);
         roster = [];
       }
-      populateElevesDatalist();
+      populateEleveSelects();
       renderRosterStatus();
     }
 
     function setRoster(students) {
       roster = students;
-      populateElevesDatalist();
+      populateEleveSelects();
       renderRosterStatus();
       saveRoster();
     }
@@ -693,7 +738,7 @@
     function clearRoster() {
       roster = [];
       try { localStorage.removeItem(ROSTER_STORAGE_KEY); } catch (err) {}
-      populateElevesDatalist();
+      populateEleveSelects();
       renderRosterStatus();
       classFile.value = '';
       setStatus('Classe effacée');
@@ -925,6 +970,9 @@
         galleryGrid.appendChild(btn);
       });
       galleryEmpty.classList.toggle('hidden', galleryItems.length > 0);
+      // L'export CSV ne devient accessible qu'une fois la bibliothèque de photos non vide,
+      // pour éviter toute confusion avant la première capture.
+      btnExportCsv.disabled = galleryItems.length === 0;
       if (!keepSelection && galleryItems.length > 0 && photo.classList.contains('hidden')) {
         showPhoto(galleryItems[0].url, 0);
       }
@@ -976,6 +1024,7 @@
       photo.classList.add('hidden');
       downloadLink.removeAttribute('href');
       downloadLink.classList.add('hidden');
+      btnExportCsv.disabled = true;
       try {
         localStorage.removeItem(GALLERY_STORAGE_KEY);
       } catch (err) {}
@@ -998,8 +1047,8 @@
         sourceCanvas.height = h;
         sourceCanvas.getContext('2d').drawImage(video, 0, 0, w, h);
 
-        const starter = starterNameInput.value.trim();
-        const relayeur = relayeurNameInput.value.trim();
+        const starter = getSelectedName(starterSelect, starterManual);
+        const relayeur = getSelectedName(relayeurSelect, relayeurManual);
         const durationSeconds = clampSeconds(secondsInput.value);
         const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur);
         const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
@@ -1082,6 +1131,8 @@
     btnExportCsv.addEventListener('click', exportCsv);
     classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
     btnClearRoster.addEventListener('click', clearRoster);
+    starterSelect.addEventListener('change', () => syncManualVisibility(starterSelect, starterManual));
+    relayeurSelect.addEventListener('change', () => syncManualVisibility(relayeurSelect, relayeurManual));
     window.addEventListener('beforeunload', stopCamera);
 
     updateSeconds(12);
@@ -1090,10 +1141,62 @@
     renderEcartPanel();
     loadRoster();
 
+    // ---- Installation et mise à jour de la PWA ----
+
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      btnInstall.classList.remove('hidden');
+    });
+    btnInstall.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      btnInstall.disabled = true;
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch (err) {}
+      deferredInstallPrompt = null;
+      btnInstall.classList.add('hidden');
+      btnInstall.disabled = false;
+    });
+    window.addEventListener('appinstalled', () => {
+      btnInstall.classList.add('hidden');
+      deferredInstallPrompt = null;
+      setStatus('Application installée');
+    });
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(console.error);
+        navigator.serviceWorker.register('./sw.js').then((registration) => {
+          // Un Service Worker déjà en attente (mise à jour téléchargée lors d'une visite précédente) :
+          // on propose tout de suite d'actualiser.
+          if (registration.waiting) showUpdateBanner(registration);
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateBanner(registration);
+              }
+            });
+          });
+        }).catch(console.error);
       });
+
+      // Dès que le nouveau Service Worker prend le contrôle, on recharge une seule fois
+      // pour garantir que la page affichée corresponde bien à la version installée.
+      let refreshingAfterUpdate = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingAfterUpdate) return;
+        refreshingAfterUpdate = true;
+        window.location.reload();
+      });
+    }
+
+    function showUpdateBanner(registration) {
+      updateBanner.classList.remove('hidden');
+      btnUpdateReload.onclick = () => {
+        if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      };
     }
   </script>
 </body>
