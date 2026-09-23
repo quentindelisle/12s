@@ -195,23 +195,6 @@
       display: block;
       background: #000;
     }
-    .camera-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      pointer-events: none;
-      padding: 12px;
-    }
-    .pill {
-      background: rgba(15,23,42,.72);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.16);
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: .9rem;
-    }
     .gallery { margin-top: 16px; }
     .latest-box { margin-top: 10px; }
     .latest-box img {
@@ -340,6 +323,33 @@
       max-height: calc(100vh - 48px);
       overflow-y: auto;
     }
+    .photo-modal {
+      width: min(100%, 980px);
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+    }
+    .photo-analysis-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 20px;
+      margin-top: 14px;
+      align-items: stretch;
+    }
+    .photo-analysis-left, .photo-analysis-right {
+      display: flex;
+      flex-direction: column;
+    }
+    .photo-analysis-left img {
+      width: 100%;
+      border-radius: 18px;
+      display: block;
+      border: 1px solid var(--card-border);
+      background: #000;
+    }
+    .photo-analysis-left a.dl { margin-top: auto; }
+    @media (max-width: 760px) {
+      .photo-analysis-grid { grid-template-columns: 1fr; }
+    }
     .roster-manage-list { margin-top: 8px; }
     .roster-row {
       display: flex;
@@ -423,10 +433,6 @@
         <h2>📷 Aperçu caméra</h2>
         <div class="video-wrap">
           <video id="video" playsinline autoplay muted></video>
-          <div class="camera-overlay">
-            <div class="pill" id="cameraState">Caméra inactive</div>
-            <div class="pill">Caméra arrière</div>
-          </div>
         </div>
         <p class="note" style="margin-top:10px;">Après chaque bip, l'analyse de la photo finish s'ouvre automatiquement pour noter l'écart. Tu peux la fermer et y revenir plus tard depuis la galerie ci-dessous.</p>
 
@@ -443,23 +449,26 @@
   </div>
 
   <div id="photoOverlay" class="admin-overlay hidden">
-    <div class="card admin-modal">
-      <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0;">🔎 Analyse de la photo finish</h2>
-        <button id="btnPhotoClose" class="secondary" type="button">✖️ Fermer</button>
-      </div>
+    <div class="card photo-modal">
+      <h2 style="margin:0;">🔎 Analyse de la photo finish</h2>
       <p id="photoParticipants" class="note" style="margin-top:8px;"></p>
       <p id="photoTargetBadge" class="target-badge hidden"></p>
 
-      <div class="latest-box">
-        <img id="photo" alt="Photo capturée" class="hidden" />
-        <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">⬇️ Télécharger cette photo</a>
+      <div class="photo-analysis-grid">
+        <div class="photo-analysis-left">
+          <img id="photo" alt="Photo capturée" class="hidden" />
+          <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">⬇️ Télécharger cette photo</a>
+        </div>
+        <div class="photo-analysis-right">
+          <h2 id="ecartPanelTitle" style="margin-top:0;">🎯 Écart à la cible</h2>
+          <p id="ecartHint" class="note"></p>
+          <div id="ecartButtons" class="ecart-buttons-grid"></div>
+        </div>
       </div>
 
-      <div class="ecart-panel">
-        <h2 id="ecartPanelTitle">🎯 Écart à la cible</h2>
-        <p id="ecartHint" class="note"></p>
-        <div id="ecartButtons" class="ecart-buttons-grid"></div>
+      <div class="row" style="justify-content:flex-end; margin-top:18px;">
+        <button id="btnPhotoClose" class="secondary" type="button">✖️ Fermer</button>
+        <button id="btnPhotoSaveClose" class="success" type="button">💾 Enregistrer et fermer</button>
       </div>
     </div>
   </div>
@@ -606,7 +615,6 @@
     const video = $('video');
     const photo = $('photo');
     const downloadLink = $('downloadLink');
-    const cameraState = $('cameraState');
     const galleryGrid = $('galleryGrid');
     const galleryEmpty = $('galleryEmpty');
     const classFile = $('classFile');
@@ -618,6 +626,7 @@
     const ecartHint = $('ecartHint');
     const photoOverlay = $('photoOverlay');
     const btnPhotoClose = $('btnPhotoClose');
+    const btnPhotoSaveClose = $('btnPhotoSaveClose');
     const photoParticipants = $('photoParticipants');
     const photoTargetBadge = $('photoTargetBadge');
     const btnExportCsv = $('btnExportCsv');
@@ -649,7 +658,7 @@
     const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.9.0';
+    const APP_VERSION = '1.10.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -1333,15 +1342,17 @@
       if (stream && !isCameraLive()) {
         stream = null;
         video.srcObject = null;
-        cameraState.textContent = 'Caméra inactive';
       }
       syncCameraAdminUI();
     }
 
-    async function startCamera() {
+    // `silent` : pas d'alerte bloquante ni de message d'erreur intrusif — utilisé pour la
+    // relance automatique en pleine série de prises (voir ensureCameraReady ci-dessous).
+    async function startCamera(options = {}) {
+      const { silent = false } = options;
       stopCamera();
       try {
-        setStatus('Demande d’autorisation caméra...');
+        if (!silent) setStatus('Demande d’autorisation caméra...');
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: { exact: 'environment' } },
@@ -1355,25 +1366,25 @@
         }
         video.srcObject = stream;
         await video.play();
-        cameraState.textContent = 'Caméra active';
-        setStatus('Caméra prête');
+        if (!silent) setStatus('Caméra prête');
         // Si la piste s'arrête toute seule (caméra reprise par une autre appli, permission
-        // révoquée, matériel débranché...), on réactive automatiquement le bouton en Admin.
+        // révoquée, matériel débranché...), on réactive automatiquement le bouton en Admin —
+        // et la prochaine capture la relancera d'elle-même (voir ensureCameraReady).
         stream.getVideoTracks().forEach((track) => {
           track.addEventListener('ended', () => {
             if (stream && stream.getVideoTracks().includes(track)) {
               stream = null;
               video.srcObject = null;
-              cameraState.textContent = 'Caméra inactive';
               syncCameraAdminUI();
-              setStatus('Caméra interrompue — relance-la depuis l’Admin si besoin');
+              setStatus('Caméra interrompue — relance automatique à la prochaine prise');
             }
           });
         });
       } catch (err) {
-        cameraState.textContent = 'Caméra inactive';
-        setStatus('Accès caméra refusé ou indisponible');
-        alert('Impossible d’accéder à la caméra arrière. Vérifie les permissions et utilise HTTPS ou une PWA installée.');
+        setStatus('Caméra indisponible');
+        if (!silent) {
+          alert('Impossible d’accéder à la caméra arrière. Vérifie les permissions et utilise HTTPS ou une PWA installée.');
+        }
         console.error(err);
       } finally {
         syncCameraAdminUI();
@@ -1386,11 +1397,50 @@
         stream = null;
       }
       video.srcObject = null;
-      cameraState.textContent = 'Caméra inactive';
       syncCameraAdminUI();
     }
 
-    function stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, mode) {
+    // Garantit une caméra prête juste avant chaque capture, sans intervention manuelle : si
+    // elle s'est coupée entre deux passages (cas fréquent en enchaînant les prises), on la
+    // relance silencieusement et on attend la première image avant de déclencher la photo.
+    async function ensureCameraReady() {
+      if (isCameraLive()) return true;
+      setStatus('Caméra relancée automatiquement...');
+      await startCamera({ silent: true });
+      if (!isCameraLive()) return false;
+      if (video.readyState < 2) {
+        await new Promise((resolve) => {
+          let done = false;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            video.removeEventListener('loadeddata', finish);
+            resolve();
+          };
+          video.addEventListener('loadeddata', finish);
+          setTimeout(finish, 800);
+        });
+      }
+      return isCameraLive();
+    }
+
+    // Chemin arrondi réutilisé pour tous les panneaux dessinés sur la photo (infos, cible,
+    // horodatage) afin d'éviter de dupliquer le tracé à chaque fois.
+    function roundRectPath(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, mode, targetMeters) {
       const out = document.createElement('canvas');
       out.width = sourceCanvas.width;
       out.height = sourceCanvas.height;
@@ -1398,57 +1448,75 @@
       ctx.drawImage(sourceCanvas, 0, 0);
 
       const isIndividuel = mode === 'individuel';
-      const lineCount = isIndividuel ? 3 : 4; // titre + décompte + coureur(s)
+      const lineCount = isIndividuel ? 2 : 3; // décompte + coureur(s), sans titre
 
       const pad = Math.max(18, Math.round(out.width * 0.018));
-      const panelW = Math.min(out.width * 0.84, 900);
+      const panelW = Math.min(out.width * 0.66, 640);
       const lineH = Math.max(34, Math.round(out.height * 0.052));
-      const panelH = lineH * lineCount + pad * 1.4;
+      const panelH = lineH * lineCount + pad * 1.3;
       const x = pad;
       const y = out.height - panelH - pad;
       const radius = Math.max(18, Math.round(out.width * 0.018));
+      const textSize = Math.max(24, Math.round(out.width * 0.024));
 
+      // Panneau principal (bas-gauche) : décompte + coureur(s), sans titre "Photo Finish".
       ctx.fillStyle = 'rgba(7, 18, 37, 0.72)';
       ctx.strokeStyle = 'rgba(255,255,255,0.22)';
       ctx.lineWidth = Math.max(2, Math.round(out.width * 0.0025));
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + panelW - radius, y);
-      ctx.quadraticCurveTo(x + panelW, y, x + panelW, y + radius);
-      ctx.lineTo(x + panelW, y + panelH - radius);
-      ctx.quadraticCurveTo(x + panelW, y + panelH, x + panelW - radius, y + panelH);
-      ctx.lineTo(x + radius, y + panelH);
-      ctx.quadraticCurveTo(x, y + panelH, x, y + panelH - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
+      roundRectPath(ctx, x, y, panelW, panelH, radius);
       ctx.fill();
       ctx.stroke();
 
-      const titleSize = Math.max(28, Math.round(out.width * 0.032));
-      const textSize = Math.max(24, Math.round(out.width * 0.024));
       ctx.fillStyle = '#ffffff';
-      ctx.font = `700 ${titleSize}px system-ui, Arial, sans-serif`;
-      ctx.fillText('PHOTO FINISH', x + pad, y + pad + titleSize);
-
       ctx.font = `700 ${textSize}px system-ui, Arial, sans-serif`;
-      let lineIndex = 1;
-      ctx.fillText(`Décompte : ${durationSeconds}s`, x + pad, y + pad + titleSize + lineH * lineIndex);
-      lineIndex += 1;
+      let lineIndex = 0;
+      ctx.fillText(`Décompte : ${durationSeconds}s`, x + pad, y + pad + textSize);
       if (isIndividuel) {
-        ctx.fillText(`Coureur : ${starter || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
         lineIndex += 1;
+        ctx.fillText(`Coureur : ${starter || '—'}`, x + pad, y + pad + textSize + lineH * lineIndex);
       } else {
-        ctx.fillText(`Démarreur : ${starter || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
         lineIndex += 1;
-        ctx.fillText(`Relayeur : ${relayeur || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
+        ctx.fillText(`Démarreur : ${starter || '—'}`, x + pad, y + pad + textSize + lineH * lineIndex);
         lineIndex += 1;
+        ctx.fillText(`Relayeur : ${relayeur || '—'}`, x + pad, y + pad + textSize + lineH * lineIndex);
       }
 
-      ctx.textAlign = 'right';
+      // Horodatage : petite pastille à droite de la photo, bien séparée du panneau d'infos
+      // ci-dessus pour que les deux ne se mélangent pas ; police réduite.
+      const smallSize = Math.max(15, Math.round(out.width * 0.013));
+      ctx.font = `600 ${smallSize}px system-ui, Arial, sans-serif`;
+      const stampText = new Date().toLocaleString('fr-FR');
+      const stampPadX = Math.max(10, Math.round(out.width * 0.012));
+      const stampPadY = Math.max(7, Math.round(out.width * 0.009));
+      const stampW = ctx.measureText(stampText).width + stampPadX * 2;
+      const stampH = smallSize + stampPadY * 2;
+      const stampX = out.width - pad - stampW;
+      const stampY = out.height - pad - stampH;
+      ctx.fillStyle = 'rgba(7, 18, 37, 0.62)';
+      roundRectPath(ctx, stampX, stampY, stampW, stampH, Math.round(stampH / 2));
+      ctx.fill();
       ctx.fillStyle = '#d6e7ff';
-      ctx.fillText(new Date().toLocaleString('fr-FR'), x + panelW - pad, y + pad + titleSize + lineH * (lineIndex - 1));
-      ctx.textAlign = 'left';
+      ctx.fillText(stampText, stampX + stampPadX, stampY + stampPadY + smallSize * 0.86);
+
+      // Cible à atteindre : pastille en haut à droite de la photo, si une cible est définie.
+      if (targetMeters !== null && targetMeters !== undefined) {
+        const targetText = `🎯 ${formatMeters(targetMeters)} m`;
+        ctx.font = `800 ${textSize}px system-ui, Arial, sans-serif`;
+        const tPadX = Math.max(14, Math.round(out.width * 0.016));
+        const tPadY = Math.max(10, Math.round(out.width * 0.012));
+        const tW = ctx.measureText(targetText).width + tPadX * 2;
+        const tH = textSize + tPadY * 2;
+        const tX = out.width - pad - tW;
+        const tY = pad;
+        ctx.fillStyle = 'rgba(7, 18, 37, 0.72)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = Math.max(2, Math.round(out.width * 0.0025));
+        roundRectPath(ctx, tX, tY, tW, tH, Math.round(tH / 2));
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(targetText, tX + tPadX, tY + tPadY + textSize * 0.82);
+      }
 
       return out;
     }
@@ -1486,6 +1554,19 @@
 
     function closePhotoAnalysis() {
       photoOverlay.classList.add('hidden');
+    }
+
+    // « Enregistrer et fermer » : s'assure qu'un écart a bien été choisi avant de fermer,
+    // pour les cas où l'observateur veut compléter la notation avant de passer à autre chose
+    // (l'écart est déjà sauvegardé dès le clic sur un bouton, voir setEcart).
+    function trySaveAndClosePhotoAnalysis() {
+      const hasAttempt = currentAttemptIndex >= 0 && galleryItems[currentAttemptIndex];
+      const noted = hasAttempt && galleryItems[currentAttemptIndex].meta.ecart !== null && galleryItems[currentAttemptIndex].meta.ecart !== undefined;
+      if (!noted) {
+        alert("Choisis d'abord l'écart à la cible, ou utilise « Fermer » pour y revenir plus tard.");
+        return;
+      }
+      closePhotoAnalysis();
     }
 
     function renderGallery(options = {}) {
@@ -1583,8 +1664,11 @@
       if (takingPhoto) return;
       takingPhoto = true;
       try {
-        if (!stream) {
-          setStatus('Décompte terminé — pas de caméra active');
+        // On vérifie (et on relance si besoin) la caméra juste avant chaque prise : essentiel
+        // pour enchaîner les passages sans que l'observateur ait à s'en soucier.
+        const ready = await ensureCameraReady();
+        if (!ready) {
+          setStatus('Décompte terminé — caméra indisponible, relance-la depuis l’Admin');
           return;
         }
         const w = video.videoWidth || 1280;
@@ -1597,16 +1681,18 @@
         const starter = getSelectedName(starterSelect, starterManual);
         const relayeur = raceMode === 'individuel' ? '' : getSelectedName(relayeurSelect, relayeurManual);
         const durationSeconds = clampSeconds(secondsInput.value);
-        const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, raceMode);
-        const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
 
         // On fige la cible (en mètres) de l'élève au moment de la capture, pour que la popup
-        // d'analyse affiche toujours la bonne cible même si la sélection change ensuite.
+        // d'analyse et la photo elle-même affichent toujours la bonne cible, même si la
+        // sélection change ensuite.
         let targetMeters = null;
         if (raceMode === 'individuel' && targetEnabled && starterSelect.value && starterSelect.value !== MANUAL_OPTION) {
           const student = roster.find((s) => s.display === starterSelect.value);
           if (student && student.cible !== null && student.cible !== undefined) targetMeters = student.cible;
         }
+
+        const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, raceMode, targetMeters);
+        const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
 
         photoIndex += 1;
         addToGallery(url, { mode: raceMode, duration: durationSeconds, starter, relayeur, ecart: null, targetMeters, createdAt: new Date().toISOString() });
@@ -1737,6 +1823,7 @@
     btnStatsClose.addEventListener('click', closeStats);
     statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) closeStats(); });
     btnPhotoClose.addEventListener('click', closePhotoAnalysis);
+    btnPhotoSaveClose.addEventListener('click', trySaveAndClosePhotoAnalysis);
     photoOverlay.addEventListener('click', (e) => { if (e.target === photoOverlay) closePhotoAnalysis(); });
     modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
     unitButtons.forEach((btn) => btn.addEventListener('click', () => setEcartUnit(btn.dataset.unit)));
@@ -1751,7 +1838,7 @@
 
     btnMinus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) - 1));
     btnPlus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) + 1));
-    btnCamera.addEventListener('click', startCamera);
+    btnCamera.addEventListener('click', () => startCamera());
     btnStart.addEventListener('click', startCountdown);
     btnStop.addEventListener('click', () => {
       stopCountdown();
