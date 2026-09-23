@@ -155,7 +155,11 @@
       align-items: center;
       justify-content: center;
       text-align: center;
+      gap: 8px;
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
     }
+    button:hover:not(:disabled), a.dl:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    button:active:not(:disabled), a.dl:active { transform: translateY(0); filter: brightness(.96); }
     button.full, a.dl.full { width: 100%; }
     button.primary { background: linear-gradient(135deg, #1d63ff, #5ba1ff); box-shadow: 0 10px 20px rgba(46,121,255,.33); }
     button.secondary { background: linear-gradient(135deg, #31415f, #5d6f90); }
@@ -163,7 +167,9 @@
     button.warn { background: linear-gradient(135deg, #d29812, #f2c94c); color: #13233f; box-shadow: 0 10px 20px rgba(242,201,76,.25); }
     button.danger { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 10px 20px rgba(239,68,68,.22); }
     button:disabled { opacity: .5; cursor: not-allowed; }
-    button.mode-btn.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); box-shadow: 0 10px 20px rgba(46,121,255,.33); }
+    button.mode-btn.active, button.unit-btn.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); box-shadow: 0 10px 20px rgba(46,121,255,.33); }
+    .card { transition: box-shadow .15s ease; }
+    .card:hover { box-shadow: 0 18px 36px rgba(0,0,0,.3); }
     .timer {
       margin-top: 14px;
       padding: 16px;
@@ -265,6 +271,18 @@
     .ecart-tag.pos { color: #4ade80; }
     .ecart-tag.target { color: #60a5fa; }
     .ecart-tag.none { color: var(--muted); font-weight: 700; }
+    .target-badge {
+      margin-top: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(96,165,250,.26), rgba(96,165,250,.08));
+      border: 1px solid rgba(96,165,250,.5);
+      color: #eaf3ff;
+      font-size: 1.2rem;
+      font-weight: 900;
+      text-align: center;
+      letter-spacing: .01em;
+    }
     .hidden { display: none !important; }
     a.dl {
       display: inline-flex;
@@ -356,7 +374,7 @@
         </div>
       </div>
       <div class="top-actions">
-        <button id="btnInstall" class="primary hidden" type="button">Installer l'application</button>
+        <button id="btnInstall" class="primary hidden" type="button">⬇️ Installer l'application</button>
         <button id="btnStats" class="secondary" type="button">📊 Stats</button>
         <button id="btnAdmin" class="secondary" type="button">🔒 Admin</button>
       </div>
@@ -373,7 +391,7 @@
             <label id="starterLabel" for="starterSelect">Démarreur</label>
             <select id="starterSelect"><option value="">— Choisir dans la classe —</option></select>
             <input id="starterManual" type="text" placeholder="Prénom (saisie manuelle)" autocomplete="off" class="hidden" style="margin-top:8px;" />
-            <p id="targetHint" class="note hidden" style="margin-top:6px;"></p>
+            <p id="targetHint" class="target-badge hidden"></p>
           </div>
         </div>
 
@@ -385,9 +403,9 @@
           </div>
         </div>
 
-        <div class="row"><button id="btnStart" class="success full" type="button">Démarrer</button></div>
-        <div class="row"><button id="btnReset" class="warn full" type="button">Remettre à zéro</button></div>
-        <div class="row"><button id="btnStop" class="danger full" type="button" disabled>Arrêter</button></div>
+        <div class="row"><button id="btnStart" class="success full" type="button">▶️ Démarrer</button></div>
+        <div class="row"><button id="btnReset" class="warn full" type="button">🔄 Remettre à zéro</button></div>
+        <div class="row"><button id="btnStop" class="danger full" type="button" disabled>⏹️ Arrêter</button></div>
 
         <div class="timer">
           <div>
@@ -398,7 +416,7 @@
       </section>
 
       <section class="card">
-        <h2>Aperçu caméra</h2>
+        <h2>📷 Aperçu caméra</h2>
         <div class="video-wrap">
           <video id="video" playsinline autoplay muted></video>
           <div class="camera-overlay">
@@ -408,31 +426,31 @@
         </div>
 
         <div class="gallery latest-box">
-          <h2>Dernière photo finish</h2>
+          <h2>🖼️ Dernière photo finish</h2>
           <img id="photo" alt="Dernière photo capturée" class="hidden" />
-          <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">Télécharger la dernière photo</a>
+          <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">⬇️ Télécharger la dernière photo</a>
         </div>
 
         <div class="ecart-panel">
-          <h2>Écart à la cible</h2>
+          <h2 id="ecartPanelTitle">🎯 Écart à la cible</h2>
           <p id="ecartHint" class="note">Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.</p>
           <div class="ecart-slider-wrap">
             <input id="ecartSlider" type="range" min="-10" max="10" step="1" value="0" disabled />
             <div class="ecart-scale">
-              <span class="note">-10</span>
+              <span class="note" id="ecartScaleMin">-10</span>
               <span class="note">Cible</span>
-              <span class="note">+10</span>
+              <span class="note" id="ecartScaleMax">+10</span>
             </div>
             <div id="ecartSliderValue" class="ecart-slider-value">—</div>
           </div>
         </div>
 
         <div class="gallery">
-          <h2>Galerie des photos finish</h2>
+          <h2>🖼️ Galerie des photos finish</h2>
           <div id="galleryGrid" class="thumb-grid"></div>
           <p id="galleryEmpty" class="note">Aucune photo pour le moment.</p>
           <div class="row" style="margin-top:14px;">
-            <button id="btnExportCsv" class="success full" type="button" disabled>Exporter CSV (toutes les tentatives notées)</button>
+            <button id="btnExportCsv" class="success full" type="button" disabled>📥 Exporter CSV (toutes les tentatives notées)</button>
           </div>
         </div>
       </section>
@@ -443,7 +461,7 @@
     <div class="card admin-modal">
       <div class="row" style="justify-content:space-between;align-items:center;">
         <h2 style="margin:0;">Administration</h2>
-        <button id="btnAdminClose" class="secondary" type="button">Fermer</button>
+        <button id="btnAdminClose" class="secondary" type="button">✖️ Fermer</button>
       </div>
 
       <div id="adminGate" style="margin-top:12px;">
@@ -452,7 +470,7 @@
           <div class="field" style="max-width:220px;">
             <input id="adminPinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Code à 4 chiffres" autocomplete="off" />
           </div>
-          <button id="btnAdminUnlock" class="primary" type="button">Déverrouiller</button>
+          <button id="btnAdminUnlock" class="primary" type="button">🔓 Déverrouiller</button>
         </div>
         <p id="adminPinError" class="note hidden" style="color:#f87171;">Code incorrect.</p>
       </div>
@@ -463,13 +481,20 @@
           <button id="btnAdminLock" class="secondary" type="button">🔒 Verrouiller</button>
         </div>
 
-        <h2 style="margin-top:20px;">Mode de course</h2>
+        <h2 style="margin-top:20px;">⚙️ Mode de course</h2>
         <div class="row">
-          <button type="button" class="secondary mode-btn full" data-mode="relais" style="flex:1;">Relais (démarreur + relayeur)</button>
-          <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">Individuel (coureur seul)</button>
+          <button type="button" class="secondary mode-btn full" data-mode="relais" style="flex:1;">🔁 Relais (démarreur + relayeur)</button>
+          <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">🙋 Individuel (coureur seul)</button>
         </div>
 
-        <h2 style="margin-top:20px;">Course individuelle</h2>
+        <h2 style="margin-top:20px;">📏 Unité de l'écart à la cible</h2>
+        <p class="note">S'affiche partout où l'écart est noté ou consulté (curseur, galerie, Stats, export CSV).</p>
+        <div class="row">
+          <button type="button" class="secondary unit-btn full" data-unit="plots" style="flex:1;">📏 Plots</button>
+          <button type="button" class="secondary unit-btn full" data-unit="metres" style="flex:1;">📐 Mètres</button>
+        </div>
+
+        <h2 style="margin-top:20px;">🎯 Course individuelle</h2>
         <div class="row">
           <label class="checkbox-row" for="targetEnabledCheckbox">
             <input type="checkbox" id="targetEnabledCheckbox" />
@@ -480,7 +505,7 @@
           À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
         </p>
 
-        <h2 style="margin-top:20px;">Temps du décompte</h2>
+        <h2 style="margin-top:20px;">⏱️ Temps du décompte</h2>
         <div class="stepper-row">
           <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
           <div id="secondsDisplay" class="seconds-display" aria-live="polite">12s</div>
@@ -488,11 +513,11 @@
         </div>
         <input id="seconds" type="hidden" value="12" />
 
-        <h2 style="margin-top:20px;">Caméra</h2>
+        <h2 style="margin-top:20px;">📷 Caméra</h2>
         <p id="cameraAdminNote" class="note">Caméra inactive.</p>
-        <div class="row"><button id="btnCamera" class="primary full" type="button">Autoriser / démarrer la caméra</button></div>
+        <div class="row"><button id="btnCamera" class="primary full" type="button">📷 Autoriser / démarrer la caméra</button></div>
 
-        <h2 style="margin-top:20px;">Classe (import Pronote)</h2>
+        <h2 style="margin-top:20px;">👥 Classe (import Pronote)</h2>
         <div class="row">
           <div class="field">
             <label for="classFile">Fichier classe — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
@@ -500,11 +525,11 @@
           </div>
         </div>
         <div class="row">
-          <button id="btnClearRoster" class="secondary" type="button">Effacer la classe importée</button>
+          <button id="btnClearRoster" class="secondary" type="button">🗑️ Effacer la classe importée</button>
         </div>
         <p id="rosterStatus" class="note">Aucune classe importée.</p>
 
-        <h2 style="margin-top:20px;">Ajouter un élève</h2>
+        <h2 style="margin-top:20px;">➕ Ajouter un élève</h2>
         <div class="row">
           <div class="field">
             <label for="addNom">Nom</label>
@@ -521,13 +546,13 @@
             <input id="addCible" type="text" inputmode="decimal" placeholder="Ex. 3,20" autocomplete="off" />
           </div>
         </div>
-        <div class="row"><button id="btnAddStudent" class="success full" type="button">Ajouter à la classe</button></div>
+        <div class="row"><button id="btnAddStudent" class="success full" type="button">➕ Ajouter à la classe</button></div>
 
-        <h2 style="margin-top:20px;">Élèves de la classe (<span id="rosterCount">0</span>)</h2>
+        <h2 style="margin-top:20px;">👥 Élèves de la classe (<span id="rosterCount">0</span>)</h2>
         <div id="rosterManageList" class="roster-manage-list"></div>
 
-        <h2 style="margin-top:20px;">Galerie</h2>
-        <div class="row"><button id="btnClearGallery" class="secondary full" type="button">Effacer la galerie</button></div>
+        <h2 style="margin-top:20px;">🖼️ Galerie</h2>
+        <div class="row"><button id="btnClearGallery" class="secondary full" type="button">🗑️ Effacer la galerie</button></div>
       </div>
     </div>
   </div>
@@ -536,7 +561,7 @@
     <div class="card admin-modal">
       <div class="row" style="justify-content:space-between;align-items:center;">
         <h2 style="margin:0;">Statistiques</h2>
-        <button id="btnStatsClose" class="secondary" type="button">Fermer</button>
+        <button id="btnStatsClose" class="secondary" type="button">✖️ Fermer</button>
       </div>
       <p class="note" style="margin-top:8px;">Résultats par élève, mis à jour automatiquement.</p>
       <div id="statsResultsWrap" class="results-table-wrap" style="margin-top:8px;"></div>
@@ -610,9 +635,13 @@
     const statsOverlay = $('statsOverlay');
     const btnStatsClose = $('btnStatsClose');
     const statsResultsWrap = $('statsResultsWrap');
+    const ecartPanelTitle = $('ecartPanelTitle');
+    const ecartScaleMin = $('ecartScaleMin');
+    const ecartScaleMax = $('ecartScaleMax');
+    const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.7.0';
+    const APP_VERSION = '1.8.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -627,12 +656,14 @@
     const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
     const MODE_STORAGE_KEY = 'relais12s_mode_v1';
     const TARGET_ENABLED_STORAGE_KEY = 'relais12s_target_enabled_v1';
+    const ECART_UNIT_STORAGE_KEY = 'relais12s_ecart_unit_v1';
     const MAX_GALLERY_ITEMS = 200;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
     let roster = [];
     let raceMode = 'relais';
     let targetEnabled = false;
+    let ecartUnit = 'plots';
 
     // ---- Mode de course : relais (démarreur + relayeur) ou individuel (coureur seul) ----
 
@@ -707,7 +738,34 @@
       targetHint.classList.remove('hidden');
     }
 
-    // ---- Notation de l'écart à la cible (plots), -10 à +10, via curseur ----
+    // ---- Unité de l'écart à la cible : plots ou mètres (réglable en Admin) ----
+
+    function loadEcartUnit() {
+      try {
+        const v = localStorage.getItem(ECART_UNIT_STORAGE_KEY);
+        if (v === 'plots' || v === 'metres') ecartUnit = v;
+      } catch (err) {}
+      applyEcartUnit();
+    }
+
+    function setEcartUnit(unit) {
+      ecartUnit = unit;
+      try { localStorage.setItem(ECART_UNIT_STORAGE_KEY, unit); } catch (err) {}
+      applyEcartUnit();
+    }
+
+    function applyEcartUnit() {
+      unitButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.unit === ecartUnit));
+      const isMetres = ecartUnit === 'metres';
+      ecartPanelTitle.textContent = isMetres ? '🎯 Écart à la cible (en mètres)' : '🎯 Écart à la cible (en plots)';
+      ecartScaleMin.textContent = isMetres ? '-10 m' : '-10 plots';
+      ecartScaleMax.textContent = isMetres ? '+10 m' : '+10 plots';
+      renderEcartPanel();
+      renderGallery({ keepSelection: true });
+      refreshStatsLiveView();
+    }
+
+    // ---- Notation de l'écart à la cible (plots ou mètres), -10 à +10, via curseur ----
 
     function ecartKind(value) {
       if (value === 0) return 'target';
@@ -724,7 +782,12 @@
       if (value === 0) return 'Cible atteinte';
       const abs = Math.abs(value);
       const sign = value > 0 ? '+' : '−';
+      if (ecartUnit === 'metres') return `${sign}${abs} m`;
       return `${sign}${abs} plot${abs > 1 ? 's' : ''}`;
+    }
+
+    function ecartUnitLabel() {
+      return ecartUnit === 'metres' ? 'm' : 'plots';
     }
 
     function participantsLabel(meta) {
@@ -781,7 +844,7 @@
         alert('Aucune tentative à exporter pour le moment.');
         return;
       }
-      const header = ['Date', 'Heure', 'Mode', 'Coureur(s)', 'Décompte (s)', 'Écart (plots)', 'Résultat'];
+      const header = ['Date', 'Heure', 'Mode', 'Coureur(s)', 'Décompte (s)', `Écart (${ecartUnitLabel()})`, 'Résultat'];
       const rows = galleryItems
         .slice()
         .reverse() // ordre chronologique dans l'export
@@ -848,7 +911,7 @@
       statsResultsWrap.innerHTML = `
         <table class="results-table">
           <thead>
-            <tr><th>Élève</th><th>Tentatives</th><th>Notées</th><th>Moyenne</th><th>Meilleur écart</th></tr>
+            <tr><th>Élève</th><th>Tentatives</th><th>Notées</th><th>Moyenne (${ecartUnitLabel()})</th><th>Meilleur écart</th></tr>
           </thead>
           <tbody>
             ${rows.map((r) => `
@@ -944,8 +1007,6 @@
       return isUpperToken(tokens[0]) && !isUpperToken(tokens[tokens.length - 1]);
     }
 
-    function isUpperToken2(token) { return isUpperToken(token); }
-
     // Sépare "MARTIN Lucas", "DE LA FONTAINE Marie-Claire", etc. : le Nom est la suite de mots
     // en MAJUSCULES en tête, le Prénom est ce qui suit.
     function splitNomPrenom(fullValue) {
@@ -1040,7 +1101,7 @@
         <div class="roster-row">
           <span>${escapeHtml(s.display)}</span>
           ${targetEnabled ? `<input type="text" inputmode="decimal" class="roster-target-input" data-id="${s.id}" value="${s.cible !== null && s.cible !== undefined ? String(s.cible).replace('.', ',') : ''}" placeholder="Cible (m)" />` : ''}
-          <button type="button" class="danger roster-remove" data-id="${s.id}">Supprimer</button>
+          <button type="button" class="danger roster-remove" data-id="${s.id}">🗑️ Supprimer</button>
         </div>
       `).join('');
       rosterManageList.querySelectorAll('.roster-remove').forEach((btn) => {
@@ -1229,10 +1290,29 @@
       if (navigator.vibrate) navigator.vibrate([80, 30, 80, 30, 80]);
     }
 
+    // On se fie à l'état réel de la piste vidéo (readyState), pas juste au fait que la variable
+    // `stream` existe encore : si le système coupe la caméra (appli mise en arrière-plan, autre
+    // appli qui la reprend, etc.), `stream` peut rester non-nul alors que la caméra est en fait
+    // arrêtée — ce qui empêchait le bouton "Autoriser / démarrer la caméra" de réapparaître.
+    function isCameraLive() {
+      return !!stream && stream.getVideoTracks().some((t) => t.readyState === 'live');
+    }
+
     function syncCameraAdminUI() {
-      const active = !!stream;
+      const active = isCameraLive();
       btnCamera.classList.toggle('hidden', active);
       cameraAdminNote.textContent = active ? 'Caméra active — prête pour les prises de vue.' : 'Caméra inactive.';
+    }
+
+    // Appelé à l'ouverture de l'Admin (et peut l'être ailleurs) : détecte une caméra coupée
+    // sans qu'on l'ait explicitement arrêtée, remet l'état à jour, puis synchronise le bouton.
+    function refreshCameraState() {
+      if (stream && !isCameraLive()) {
+        stream = null;
+        video.srcObject = null;
+        cameraState.textContent = 'Caméra inactive';
+      }
+      syncCameraAdminUI();
     }
 
     async function startCamera() {
@@ -1254,6 +1334,19 @@
         await video.play();
         cameraState.textContent = 'Caméra active';
         setStatus('Caméra prête');
+        // Si la piste s'arrête toute seule (caméra reprise par une autre appli, permission
+        // révoquée, matériel débranché...), on réactive automatiquement le bouton en Admin.
+        stream.getVideoTracks().forEach((track) => {
+          track.addEventListener('ended', () => {
+            if (stream && stream.getVideoTracks().includes(track)) {
+              stream = null;
+              video.srcObject = null;
+              cameraState.textContent = 'Caméra inactive';
+              syncCameraAdminUI();
+              setStatus('Caméra interrompue — relance-la depuis l’Admin si besoin');
+            }
+          });
+        });
       } catch (err) {
         cameraState.textContent = 'Caméra inactive';
         setStatus('Accès caméra refusé ou indisponible');
@@ -1547,7 +1640,7 @@
       adminGate.classList.add('hidden');
       adminContent.classList.remove('hidden');
       renderRosterManageList();
-      syncCameraAdminUI();
+      refreshCameraState();
     }
 
     function lockAdmin() {
@@ -1565,6 +1658,7 @@
     btnStatsClose.addEventListener('click', closeStats);
     statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) closeStats(); });
     modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
+    unitButtons.forEach((btn) => btn.addEventListener('click', () => setEcartUnit(btn.dataset.unit)));
     targetEnabledCheckbox.addEventListener('change', () => setTargetEnabled(targetEnabledCheckbox.checked));
     btnAddStudent.addEventListener('click', () => {
       addStudent(addNom.value, addPrenom.value, addCible.value);
@@ -1592,14 +1686,18 @@
     starterSelect.addEventListener('change', () => { syncManualVisibility(starterSelect, starterManual); updateTargetHint(); });
     relayeurSelect.addEventListener('change', () => syncManualVisibility(relayeurSelect, relayeurManual));
     window.addEventListener('beforeunload', stopCamera);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshCameraState();
+    });
 
     updateSeconds(12);
     loadRaceMode();
     loadTargetSetting();
+    loadEcartUnit();
     loadGallery();
     renderEcartPanel();
     loadRoster();
-    syncCameraAdminUI();
+    refreshCameraState();
     const versionTag = $('versionTag');
     if (versionTag) versionTag.textContent = `v${APP_VERSION}`;
 
