@@ -168,6 +168,23 @@
     button.danger { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 10px 20px rgba(239,68,68,.22); }
     button:disabled { opacity: .5; cursor: not-allowed; }
     button.mode-btn.active, button.unit-btn.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); box-shadow: 0 10px 20px rgba(46,121,255,.33); }
+    .info-btn {
+      width: 26px;
+      height: 26px;
+      min-height: 26px;
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(91,161,255,.16);
+      color: #5ba1ff;
+      border: 1.5px solid rgba(91,161,255,.6);
+      font-weight: 900;
+      font-style: italic;
+      font-size: .82rem;
+      line-height: 1;
+      flex: none;
+      box-shadow: none;
+    }
+    .info-btn:hover { background: rgba(91,161,255,.3); }
     .card { transition: box-shadow .15s ease; }
     .card:hover { box-shadow: 0 18px 36px rgba(0,0,0,.3); }
     .timer {
@@ -448,7 +465,6 @@
         <div class="video-wrap">
           <video id="video" playsinline autoplay muted></video>
         </div>
-        <p class="note" style="margin-top:10px;">Après chaque bip, l'analyse de la photo finish s'ouvre automatiquement pour noter l'écart. Tu peux la fermer et y revenir plus tard depuis la galerie ci-dessous.</p>
 
         <div class="gallery">
           <h2>🖼️ Galerie des photos finish</h2>
@@ -519,24 +535,6 @@
           <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">🙋 Individuel (coureur seul)</button>
         </div>
 
-        <h2 style="margin-top:20px;">📏 Unité de l'écart à la cible</h2>
-        <p class="note">S'affiche partout où l'écart est noté ou consulté (curseur, galerie, Stats, export CSV).</p>
-        <div class="row">
-          <button type="button" class="secondary unit-btn full" data-unit="plots" style="flex:1;">📏 Plots</button>
-          <button type="button" class="secondary unit-btn full" data-unit="metres" style="flex:1;">📐 Mètres</button>
-        </div>
-
-        <h2 style="margin-top:20px;">🎯 Course individuelle</h2>
-        <div class="row">
-          <label class="checkbox-row" for="targetEnabledCheckbox">
-            <input type="checkbox" id="targetEnabledCheckbox" />
-            Indiquer une cible (en mètres) par élève
-          </label>
-        </div>
-        <p id="targetExplainNote" class="note hidden" style="margin-top:6px;">
-          À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
-        </p>
-
         <h2 style="margin-top:20px;">⏱️ Temps du décompte</h2>
         <div class="stepper-row">
           <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
@@ -545,17 +543,56 @@
         </div>
         <input id="seconds" type="hidden" value="12" />
 
-        <h2 style="margin-top:20px;">👥 Classe (import Pronote)</h2>
+        <h2 style="margin-top:20px;">📏 Unité de l'écart à la cible</h2>
+        <div class="row">
+          <button type="button" class="secondary unit-btn full" data-unit="plots" style="flex:1;">📏 Plots</button>
+          <button type="button" class="secondary unit-btn full" data-unit="metres" style="flex:1;">📐 Mètres</button>
+        </div>
+
+        <h2 style="margin-top:20px;">🎯 Course individuelle</h2>
+        <div class="row">
+          <label class="checkbox-row" for="targetEnabledCheckbox" style="flex:1;">
+            <input type="checkbox" id="targetEnabledCheckbox" />
+            Indiquer une cible par élève
+          </label>
+          <button type="button" id="btnTargetInfo" class="info-btn" aria-label="Plus d'informations">i</button>
+        </div>
+        <p id="targetExplainNote" class="note hidden" style="margin-top:6px;">
+          À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
+        </p>
+
+        <h2 style="margin-top:20px;">👥 Classes</h2>
         <div class="row">
           <div class="field">
-            <label for="classFile">Fichier classe — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
+            <label for="classSelect">Classe active</label>
+            <select id="classSelect"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="newClassName">Nouvelle classe</label>
+            <input id="newClassName" type="text" placeholder="Ex. 6°1" autocomplete="off" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="btnCreateClass" class="success full" type="button">➕ Créer cette classe</button>
+        </div>
+        <div class="row">
+          <button id="btnRenameClass" class="secondary" type="button" style="flex:1;">✏️ Renommer</button>
+          <button id="btnDeleteClass" class="danger" type="button" style="flex:1;">🗑️ Supprimer</button>
+        </div>
+
+        <h2 style="margin-top:20px;">📥 Importer des élèves (Pronote)</h2>
+        <div class="row">
+          <div class="field">
+            <label for="classFile">Fichier — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
             <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
           </div>
         </div>
         <div class="row">
-          <button id="btnClearRoster" class="secondary" type="button">🗑️ Effacer la classe importée</button>
+          <button id="btnClearRoster" class="secondary" type="button">🗑️ Vider les élèves de la classe active</button>
         </div>
-        <p id="rosterStatus" class="note">Aucune classe importée.</p>
+        <p id="rosterStatus" class="note">Aucune classe active.</p>
 
         <h2 style="margin-top:20px;">➕ Ajouter un élève</h2>
         <div class="row">
@@ -570,13 +607,13 @@
         </div>
         <div class="row hidden" id="addCibleRow">
           <div class="field" style="max-width:200px;">
-            <label for="addCible">Cible (m)</label>
+            <label for="addCible">Cible</label>
             <input id="addCible" type="text" inputmode="decimal" placeholder="Ex. 3,20" autocomplete="off" />
           </div>
         </div>
-        <div class="row"><button id="btnAddStudent" class="success full" type="button">➕ Ajouter à la classe</button></div>
+        <div class="row"><button id="btnAddStudent" class="success full" type="button">➕ Ajouter à la classe active</button></div>
 
-        <h2 style="margin-top:20px;">👥 Élèves de la classe (<span id="rosterCount">0</span>)</h2>
+        <h2 style="margin-top:20px;">👥 Élèves de la classe active (<span id="rosterCount">0</span>)</h2>
         <div id="rosterManageList" class="roster-manage-list"></div>
 
         <h2 style="margin-top:20px;">🖼️ Galerie</h2>
@@ -591,8 +628,7 @@
         <h2 style="margin:0;">Statistiques</h2>
         <button id="btnStatsClose" class="secondary" type="button">✖️ Fermer</button>
       </div>
-      <p class="note" style="margin-top:8px;">Résultats par élève, mis à jour automatiquement.</p>
-      <div id="statsResultsWrap" class="results-table-wrap" style="margin-top:8px;"></div>
+      <div id="statsResultsWrap" class="results-table-wrap" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -634,6 +670,12 @@
     const rosterStatus = $('rosterStatus');
     const rosterCount = $('rosterCount');
     const rosterManageList = $('rosterManageList');
+    const classSelect = $('classSelect');
+    const newClassName = $('newClassName');
+    const btnCreateClass = $('btnCreateClass');
+    const btnRenameClass = $('btnRenameClass');
+    const btnDeleteClass = $('btnDeleteClass');
+    const btnTargetInfo = $('btnTargetInfo');
     const ecartButtons = $('ecartButtons');
     const ecartHint = $('ecartHint');
     const photoOverlay = $('photoOverlay');
@@ -670,7 +712,7 @@
     const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.11.0';
+    const APP_VERSION = '1.12.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -682,14 +724,18 @@
     let currentAttemptIndex = -1;
     let adminUnlocked = false;
     const GALLERY_STORAGE_KEY = 'relais12s_gallery_v2';
-    const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
+    const ROSTER_STORAGE_KEY = 'relais12s_roster_v1'; // ancien format (une seule classe), conservé pour migration
+    const CLASSES_STORAGE_KEY = 'relais12s_classes_v1';
+    const ACTIVE_CLASS_STORAGE_KEY = 'relais12s_active_class_v1';
     const MODE_STORAGE_KEY = 'relais12s_mode_v1';
     const TARGET_ENABLED_STORAGE_KEY = 'relais12s_target_enabled_v1';
     const ECART_UNIT_STORAGE_KEY = 'relais12s_ecart_unit_v1';
     const MAX_GALLERY_ITEMS = 200;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
-    let roster = [];
+    let classes = []; // [{ id, name, students: [...] }] — plusieurs classes gérées en parallèle
+    let activeClassId = null;
+    let roster = []; // toujours un alias des élèves de la classe active (voir syncRosterAlias)
     let raceMode = 'relais';
     let targetEnabled = false;
     let ecartUnit = 'plots';
@@ -735,7 +781,6 @@
 
     function applyTargetSetting() {
       targetEnabledCheckbox.checked = targetEnabled;
-      targetExplainNote.classList.toggle('hidden', !targetEnabled);
       addCibleRow.classList.toggle('hidden', !targetEnabled);
       renderRosterManageList();
       updateTargetHint();
@@ -752,6 +797,11 @@
       return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
 
+    // La cible suit la même unité que l'écart (plots ou mètres), réglable en Admin.
+    function formatTarget(n) {
+      return `${formatMeters(n)} ${ecartUnitLabel()}`;
+    }
+
     function updateTargetHint() {
       const isIndividuel = raceMode === 'individuel';
       if (!isIndividuel || !targetEnabled || starterSelect.value === MANUAL_OPTION || !starterSelect.value) {
@@ -763,7 +813,7 @@
         targetHint.classList.add('hidden');
         return;
       }
-      targetHint.textContent = `🎯 Cible : ${formatMeters(student.cible)} m`;
+      targetHint.textContent = `🎯 Cible : ${formatTarget(student.cible)}`;
       targetHint.classList.remove('hidden');
     }
 
@@ -790,6 +840,11 @@
       renderEcartPanel();
       renderGallery({ keepSelection: true });
       refreshStatsLiveView();
+      updateTargetHint();
+      renderRosterManageList();
+      if (!photoOverlay.classList.contains('hidden') && currentAttemptIndex >= 0) {
+        refreshPhotoTargetBadge();
+      }
     }
 
     // ---- Notation de l'écart à la cible (plots ou mètres), -10 à +10, via boutons colorés ----
@@ -930,10 +985,15 @@
         const m = item.meta;
         const participants = m.mode === 'individuel' ? [m.starter] : [m.starter, m.relayeur];
         participants.filter(Boolean).forEach((name) => {
-          if (!map.has(name)) map.set(name, { count: 0, ecarts: [] });
+          if (!map.has(name)) map.set(name, { count: 0, ecarts: [], target: null });
           const entry = map.get(name);
           entry.count += 1;
           if (m.ecart !== null && m.ecart !== undefined) entry.ecarts.push(m.ecart);
+          // galleryItems est trié du plus récent au plus ancien : la première cible rencontrée
+          // pour cet élève est donc sa cible la plus récente.
+          if (entry.target === null && m.targetMeters !== null && m.targetMeters !== undefined) {
+            entry.target = m.targetMeters;
+          }
         });
       });
       return Array.from(map.entries())
@@ -941,7 +1001,7 @@
           const noted = data.ecarts.length;
           const avg = noted ? data.ecarts.reduce((a, b) => a + b, 0) / noted : null;
           const best = noted ? data.ecarts.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a)) : null;
-          return { name, count: data.count, noted, avg, best };
+          return { name, count: data.count, noted, avg, best, target: data.target };
         })
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     }
@@ -955,12 +1015,13 @@
       statsResultsWrap.innerHTML = `
         <table class="results-table">
           <thead>
-            <tr><th>Élève</th><th>Tentatives</th><th>Notées</th><th>Moyenne (${ecartUnitLabel()})</th><th>Meilleur écart</th></tr>
+            <tr><th>Élève</th><th>Cible visée</th><th>Tentatives</th><th>Notées</th><th>Moyenne (${ecartUnitLabel()})</th><th>Meilleur écart</th></tr>
           </thead>
           <tbody>
             ${rows.map((r) => `
               <tr>
                 <td>${escapeHtml(r.name)}</td>
+                <td class="num">${r.target === null ? '—' : formatTarget(r.target)}</td>
                 <td class="num">${r.count}</td>
                 <td class="num">${r.noted}</td>
                 <td class="num">${r.avg === null ? '—' : (r.avg > 0 ? '+' : '') + r.avg.toFixed(1)}</td>
@@ -1128,23 +1189,27 @@
     }
 
     function renderRosterStatus() {
-      rosterCount.textContent = String(roster.length);
-      if (!roster.length) {
-        rosterStatus.textContent = 'Aucune classe importée. Les champs Démarreur/Relayeur (ou Coureur) permettent alors uniquement la saisie manuelle.';
-        return;
+      const cls = getActiveClass();
+      const count = cls ? cls.students.length : 0;
+      rosterCount.textContent = String(count);
+      if (!cls) {
+        rosterStatus.textContent = 'Aucune classe active. Crée ou importe une classe ci-dessus.';
+      } else if (!count) {
+        rosterStatus.textContent = `Classe « ${cls.name} » : aucun élève. Importe un fichier ou ajoute des élèves manuellement.`;
+      } else {
+        rosterStatus.textContent = `Classe « ${cls.name} » : ${count} élève(s).`;
       }
-      rosterStatus.textContent = `${roster.length} élève(s) dans la classe.`;
     }
 
     function renderRosterManageList() {
       if (!roster.length) {
-        rosterManageList.innerHTML = '<p class="note">Aucun élève dans la classe.</p>';
+        rosterManageList.innerHTML = '<p class="note">Aucun élève dans la classe active.</p>';
         return;
       }
       rosterManageList.innerHTML = roster.map((s) => `
         <div class="roster-row">
           <span>${escapeHtml(s.display)}</span>
-          ${targetEnabled ? `<input type="text" inputmode="decimal" class="roster-target-input" data-id="${s.id}" value="${s.cible !== null && s.cible !== undefined ? String(s.cible).replace('.', ',') : ''}" placeholder="Cible (m)" />` : ''}
+          ${targetEnabled ? `<input type="text" inputmode="decimal" class="roster-target-input" data-id="${s.id}" value="${s.cible !== null && s.cible !== undefined ? String(s.cible).replace('.', ',') : ''}" placeholder="Cible" />` : ''}
           <button type="button" class="danger roster-remove" data-id="${s.id}">🗑️ Supprimer</button>
         </div>
       `).join('');
@@ -1156,74 +1221,192 @@
       });
     }
 
-    function saveRoster() {
-      try {
-        localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(roster));
-      } catch (err) {
-        console.warn('Impossible de sauvegarder la classe', err);
-      }
+    // ---- Gestion de plusieurs classes en parallèle (ex. enchaîner plusieurs cours) ----
+
+    function getActiveClass() {
+      return classes.find((c) => c.id === activeClassId) || null;
     }
 
-    function loadRoster() {
+    // `roster` reste un simple alias vers les élèves de la classe active, pour que le reste du
+    // code (sélecteurs, ajout/suppression d'élève...) n'ait pas besoin de connaître les classes.
+    function syncRosterAlias() {
+      const active = getActiveClass();
+      roster = active ? active.students : [];
+    }
+
+    function saveClasses() {
+      try { localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(classes)); } catch (err) {
+        console.warn('Impossible de sauvegarder les classes', err);
+      }
+      try { localStorage.setItem(ACTIVE_CLASS_STORAGE_KEY, activeClassId || ''); } catch (err) {}
+    }
+
+    function renderClassSelector() {
+      if (!classes.length) {
+        classSelect.innerHTML = '<option value="">Aucune classe</option>';
+        classSelect.disabled = true;
+        return;
+      }
+      classSelect.disabled = false;
+      classSelect.innerHTML = classes
+        .map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} (${c.students.length})</option>`)
+        .join('');
+      classSelect.value = activeClassId || '';
+    }
+
+    function loadClasses() {
       try {
-        const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+        const raw = localStorage.getItem(CLASSES_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) roster = parsed.map((s) => ({ id: s.id || makeId(), ...s }));
+          if (Array.isArray(parsed)) {
+            classes = parsed.map((c) => ({
+              id: c.id || makeId(),
+              name: c.name || 'Classe',
+              students: Array.isArray(c.students) ? c.students.map((s) => ({ id: s.id || makeId(), ...s })) : [],
+            }));
+          }
+        } else {
+          // Migration depuis l'ancien format (une seule classe, sans nom).
+          const legacyRaw = localStorage.getItem(ROSTER_STORAGE_KEY);
+          if (legacyRaw) {
+            const parsedLegacy = JSON.parse(legacyRaw);
+            if (Array.isArray(parsedLegacy) && parsedLegacy.length) {
+              classes = [{
+                id: makeId(),
+                name: 'Ma classe',
+                students: parsedLegacy.map((s) => ({ id: s.id || makeId(), ...s })),
+              }];
+            }
+          }
         }
       } catch (err) {
-        console.warn('Impossible de charger la classe', err);
-        roster = [];
+        console.warn('Impossible de charger les classes', err);
+        classes = [];
       }
+      let savedActiveId = null;
+      try { savedActiveId = localStorage.getItem(ACTIVE_CLASS_STORAGE_KEY); } catch (err) {}
+      activeClassId = (savedActiveId && classes.some((c) => c.id === savedActiveId))
+        ? savedActiveId
+        : (classes.length ? classes[0].id : null);
+      syncRosterAlias();
+      saveClasses();
       populateEleveSelects();
       renderRosterStatus();
+      renderClassSelector();
     }
 
-    function setRoster(students) {
-      roster = students;
+    function createClass(name) {
+      const cls = { id: makeId(), name: (name || '').trim() || `Classe ${classes.length + 1}`, students: [] };
+      classes.push(cls);
+      activeClassId = cls.id;
+      syncRosterAlias();
+      saveClasses();
       populateEleveSelects();
       renderRosterStatus();
       renderRosterManageList();
-      saveRoster();
+      renderClassSelector();
+      return cls;
     }
 
-    function clearRoster() {
-      roster = [];
-      try { localStorage.removeItem(ROSTER_STORAGE_KEY); } catch (err) {}
+    function setActiveClass(id) {
+      if (!classes.some((c) => c.id === id)) return;
+      activeClassId = id;
+      syncRosterAlias();
+      saveClasses();
       populateEleveSelects();
       renderRosterStatus();
       renderRosterManageList();
+      renderClassSelector();
+    }
+
+    function renameActiveClass(name) {
+      const cls = getActiveClass();
+      if (!cls) return;
+      cls.name = (name || '').trim() || cls.name;
+      saveClasses();
+      renderClassSelector();
+      renderRosterStatus();
+    }
+
+    function deleteActiveClass() {
+      const cls = getActiveClass();
+      if (!cls) return;
+      if (!confirm(`Supprimer la classe « ${cls.name} » et ses ${cls.students.length} élève(s) ?`)) return;
+      classes = classes.filter((c) => c.id !== cls.id);
+      activeClassId = classes.length ? classes[0].id : null;
+      syncRosterAlias();
+      saveClasses();
+      populateEleveSelects();
+      renderRosterStatus();
+      renderRosterManageList();
+      renderClassSelector();
+      setStatus('Classe supprimée');
+    }
+
+    function setRosterForActiveClass(students) {
+      const cls = getActiveClass();
+      if (!cls) return;
+      cls.students = students;
+      syncRosterAlias();
+      populateEleveSelects();
+      renderRosterStatus();
+      renderRosterManageList();
+      renderClassSelector();
+      saveClasses();
+    }
+
+    function clearActiveClassStudents() {
+      const cls = getActiveClass();
+      if (!cls) { setStatus('Aucune classe active'); return; }
+      cls.students = [];
+      syncRosterAlias();
+      populateEleveSelects();
+      renderRosterStatus();
+      renderRosterManageList();
+      renderClassSelector();
+      saveClasses();
       classFile.value = '';
-      setStatus('Classe effacée');
+      setStatus('Élèves de la classe effacés');
     }
 
     function addStudent(nom, prenom, cibleRaw) {
       const n = (nom || '').trim();
       const p = (prenom || '').trim();
       if (!n && !p) return;
+      let cls = getActiveClass();
+      if (!cls) cls = createClass('Ma classe');
       const student = { id: makeId(), nom: n, prenom: p, display: displayName(n, p) };
       if (targetEnabled) student.cible = parseTargetMeters(cibleRaw);
-      roster.push(student);
-      roster.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
+      cls.students.push(student);
+      cls.students.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
+      syncRosterAlias();
       populateEleveSelects();
       renderRosterStatus();
       renderRosterManageList();
-      saveRoster();
+      renderClassSelector();
+      saveClasses();
     }
 
     function removeStudent(id) {
-      roster = roster.filter((s) => s.id !== id);
+      const cls = getActiveClass();
+      if (!cls) return;
+      cls.students = cls.students.filter((s) => s.id !== id);
+      syncRosterAlias();
       populateEleveSelects();
       renderRosterStatus();
       renderRosterManageList();
-      saveRoster();
+      renderClassSelector();
+      saveClasses();
     }
 
     function updateStudentTarget(id, rawValue) {
-      const s = roster.find((x) => x.id === id);
+      const cls = getActiveClass();
+      if (!cls) return;
+      const s = cls.students.find((x) => x.id === id);
       if (!s) return;
       s.cible = parseTargetMeters(rawValue);
-      saveRoster();
+      saveClasses();
       updateTargetHint();
     }
 
@@ -1239,6 +1422,11 @@
 
     async function handleClassFile(file) {
       if (!file) return;
+      if (!getActiveClass()) {
+        const defaultName = file.name.replace(/\.[^.]+$/, '') || 'Classe importée';
+        const name = prompt('Nom de la nouvelle classe :', defaultName);
+        createClass(name || defaultName);
+      }
       const name = file.name.toLowerCase();
       try {
         if (name.endsWith('.xlsx')) {
@@ -1253,13 +1441,13 @@
           // ce qui permet de détecter une colonne B "date de naissance".
           const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
           const { students, combinedMode } = rowsToRoster(rows, { includeTarget: targetEnabled });
-          setRoster(students);
+          setRosterForActiveClass(students);
           reportImport(students, combinedMode);
         } else {
           const text = await file.text();
           const rows = parseDelimitedText(text);
           const { students, combinedMode } = rowsToRoster(rows, { includeTarget: targetEnabled });
-          setRoster(students);
+          setRosterForActiveClass(students);
           reportImport(students, combinedMode);
         }
       } catch (err) {
@@ -1535,7 +1723,7 @@
 
       // Cible à atteindre : pastille en haut à droite de la photo, si une cible est définie.
       if (targetMeters !== null && targetMeters !== undefined) {
-        const targetText = `🎯 ${formatMeters(targetMeters)} m`;
+        const targetText = `🎯 ${formatTarget(targetMeters)}`;
         ctx.font = `800 ${textSize}px system-ui, Arial, sans-serif`;
         const tPadX = Math.max(14, Math.round(out.width * 0.016));
         const tPadY = Math.max(10, Math.round(out.width * 0.012));
@@ -1575,16 +1763,20 @@
         ? `${item.meta.mode === 'individuel' ? 'Coureur' : 'Passage'} : ${who} — décompte ${item.meta.duration}s`
         : `Décompte ${item.meta.duration}s`;
 
-      const target = item.meta.targetMeters;
+      refreshPhotoTargetBadge();
+      renderEcartPanel();
+      photoOverlay.classList.remove('hidden');
+    }
+
+    function refreshPhotoTargetBadge() {
+      const item = galleryItems[currentAttemptIndex];
+      const target = item ? item.meta.targetMeters : null;
       if (target !== null && target !== undefined) {
-        photoTargetBadge.textContent = `🎯 Cible à atteindre : ${formatMeters(target)} m`;
+        photoTargetBadge.textContent = `🎯 Cible à atteindre : ${formatTarget(target)}`;
         photoTargetBadge.classList.remove('hidden');
       } else {
         photoTargetBadge.classList.add('hidden');
       }
-
-      renderEcartPanel();
-      photoOverlay.classList.remove('hidden');
     }
 
     function closePhotoAnalysis() {
@@ -1893,7 +2085,22 @@
     btnClearGallery.addEventListener('click', clearGallery);
     btnExportCsv.addEventListener('click', exportCsv);
     classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
-    btnClearRoster.addEventListener('click', clearRoster);
+    btnClearRoster.addEventListener('click', clearActiveClassStudents);
+    classSelect.addEventListener('change', () => setActiveClass(classSelect.value));
+    btnCreateClass.addEventListener('click', () => {
+      const name = newClassName.value.trim();
+      if (!name) { alert('Indique un nom de classe.'); return; }
+      createClass(name);
+      newClassName.value = '';
+    });
+    btnRenameClass.addEventListener('click', () => {
+      const cls = getActiveClass();
+      if (!cls) { alert('Aucune classe active.'); return; }
+      const name = prompt('Nouveau nom de la classe :', cls.name);
+      if (name && name.trim()) renameActiveClass(name.trim());
+    });
+    btnDeleteClass.addEventListener('click', deleteActiveClass);
+    btnTargetInfo.addEventListener('click', () => targetExplainNote.classList.toggle('hidden'));
     starterSelect.addEventListener('change', () => { syncManualVisibility(starterSelect, starterManual); updateTargetHint(); });
     relayeurSelect.addEventListener('change', () => syncManualVisibility(relayeurSelect, relayeurManual));
     window.addEventListener('beforeunload', stopCamera);
@@ -1911,7 +2118,7 @@
     loadEcartUnit();
     loadGallery();
     renderEcartPanel();
-    loadRoster();
+    loadClasses();
     refreshCameraState();
     const versionTag = $('versionTag');
     if (versionTag) versionTag.textContent = `v${APP_VERSION}`;
