@@ -323,6 +323,20 @@
       max-height: calc(100vh - 48px);
       overflow-y: auto;
     }
+    .admin-modal-header {
+      position: sticky;
+      top: -16px;
+      margin: -16px -16px 12px;
+      padding: 16px 16px 12px;
+      background: var(--card);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--card-border);
+      z-index: 5;
+    }
     .photo-modal {
       width: min(100%, 980px);
       max-height: calc(100vh - 48px);
@@ -475,9 +489,12 @@
 
   <div id="adminOverlay" class="admin-overlay hidden">
     <div class="card admin-modal">
-      <div class="row" style="justify-content:space-between;align-items:center;">
+      <div class="admin-modal-header">
         <h2 style="margin:0;">Administration</h2>
-        <button id="btnAdminClose" class="secondary" type="button">✖️ Fermer</button>
+        <div class="row" style="gap:8px;">
+          <button id="btnAdminLock" class="secondary hidden" type="button">🔒 Verrouiller</button>
+          <button id="btnAdminClose" class="secondary" type="button">✖️ Fermer</button>
+        </div>
       </div>
 
       <div id="adminGate" style="margin-top:12px;">
@@ -492,10 +509,9 @@
       </div>
 
       <div id="adminContent" class="hidden" style="margin-top:12px;">
-        <div class="row" style="justify-content:space-between;align-items:center;">
-          <span class="note">Session administrateur déverrouillée</span>
-          <button id="btnAdminLock" class="secondary" type="button">🔒 Verrouiller</button>
-        </div>
+        <h2 style="margin-top:0;">📷 Caméra</h2>
+        <p id="cameraAdminNote" class="note">Caméra inactive.</p>
+        <div class="row"><button id="btnCamera" class="primary full" type="button">📷 Autoriser / démarrer la caméra</button></div>
 
         <h2 style="margin-top:20px;">⚙️ Mode de course</h2>
         <div class="row">
@@ -528,10 +544,6 @@
           <button id="btnPlus" class="success stepper-btn" type="button">+</button>
         </div>
         <input id="seconds" type="hidden" value="12" />
-
-        <h2 style="margin-top:20px;">📷 Caméra</h2>
-        <p id="cameraAdminNote" class="note">Caméra inactive.</p>
-        <div class="row"><button id="btnCamera" class="primary full" type="button">📷 Autoriser / démarrer la caméra</button></div>
 
         <h2 style="margin-top:20px;">👥 Classe (import Pronote)</h2>
         <div class="row">
@@ -658,7 +670,7 @@
     const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.10.0';
+    const APP_VERSION = '1.11.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -1400,14 +1412,34 @@
       syncCameraAdminUI();
     }
 
+    // Certains navigateurs suspendent le rendu d'un <video> caché derrière un élément en
+    // position fixed (nos popups Admin / analyse photo occupent tout l'écran) même si le flux
+    // continue en arrière-plan : la piste reste "live" mais l'image affichée se fige sur la
+    // dernière frame rendue — d'où le bug "l'aperçu se fige et la photo suivante reste figée".
+    // On force un redémarrage du rendu en redétachant puis rattachant le flux à l'élément.
+    function wakeVideoPreview() {
+      if (!stream) return;
+      const s = stream;
+      video.srcObject = null;
+      requestAnimationFrame(() => {
+        if (stream !== s) return; // la caméra a changé entre-temps, on n'écrase pas
+        video.srcObject = s;
+        video.play().catch(() => {});
+      });
+    }
+
     // Garantit une caméra prête juste avant chaque capture, sans intervention manuelle : si
     // elle s'est coupée entre deux passages (cas fréquent en enchaînant les prises), on la
-    // relance silencieusement et on attend la première image avant de déclencher la photo.
+    // relance silencieusement ; si elle est restée "live" mais gelée (voir wakeVideoPreview),
+    // on force le redémarrage du rendu avant de déclencher la photo.
     async function ensureCameraReady() {
-      if (isCameraLive()) return true;
-      setStatus('Caméra relancée automatiquement...');
-      await startCamera({ silent: true });
-      if (!isCameraLive()) return false;
+      if (!isCameraLive()) {
+        setStatus('Caméra relancée automatiquement...');
+        await startCamera({ silent: true });
+        if (!isCameraLive()) return false;
+      } else {
+        wakeVideoPreview();
+      }
       if (video.readyState < 2) {
         await new Promise((resolve) => {
           let done = false;
@@ -1420,6 +1452,9 @@
           video.addEventListener('loadeddata', finish);
           setTimeout(finish, 800);
         });
+      } else {
+        // Laisse une frame au navigateur pour réellement redessiner après le réattachement.
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }
       return isCameraLive();
     }
@@ -1554,6 +1589,7 @@
 
     function closePhotoAnalysis() {
       photoOverlay.classList.add('hidden');
+      wakeVideoPreview();
     }
 
     // « Enregistrer et fermer » : s'assure qu'un écart a bien été choisi avant de fermer,
@@ -1772,10 +1808,15 @@
 
     // ---- Interface Admin (code 0000 par défaut) ----
 
+    function syncAdminLockButtonVisibility() {
+      btnAdminLock.classList.toggle('hidden', !adminUnlocked);
+    }
+
     function openAdmin() {
       adminOverlay.classList.remove('hidden');
       adminPinInput.value = '';
       adminPinError.classList.add('hidden');
+      syncAdminLockButtonVisibility();
       if (adminUnlocked) {
         showAdminContent();
       } else {
@@ -1787,6 +1828,7 @@
 
     function closeAdmin() {
       adminOverlay.classList.add('hidden');
+      wakeVideoPreview();
     }
 
     function tryUnlockAdmin() {
@@ -1804,6 +1846,7 @@
     function showAdminContent() {
       adminGate.classList.add('hidden');
       adminContent.classList.remove('hidden');
+      syncAdminLockButtonVisibility();
       renderRosterManageList();
       refreshCameraState();
     }
@@ -1855,7 +1898,10 @@
     relayeurSelect.addEventListener('change', () => syncManualVisibility(relayeurSelect, relayeurManual));
     window.addEventListener('beforeunload', stopCamera);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') refreshCameraState();
+      if (document.visibilityState === 'visible') {
+        refreshCameraState();
+        wakeVideoPreview();
+      }
     });
 
     updateSeconds(12);
