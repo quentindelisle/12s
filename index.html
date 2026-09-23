@@ -185,6 +185,39 @@
       box-shadow: none;
     }
     .info-btn:hover { background: rgba(91,161,255,.3); }
+    .admin-tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 18px;
+      border-bottom: 1px solid var(--card-border);
+      flex-wrap: wrap;
+    }
+    .admin-tab-btn {
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+      border-radius: 14px 14px 0 0;
+      padding: 10px 14px;
+      min-height: auto;
+      border-bottom: 3px solid transparent;
+    }
+    .admin-tab-btn:hover:not(:disabled) { transform: none; filter: none; color: #fff; }
+    .admin-tab-btn.active {
+      color: #ffffff;
+      background: rgba(91,161,255,.14);
+      border-bottom: 3px solid #5ba1ff;
+    }
+    .admin-tab-panel { padding-top: 16px; }
+    .qr-wrap {
+      margin-top: 14px;
+      text-align: center;
+    }
+    .qr-box {
+      display: inline-block;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 18px;
+    }
     .card { transition: box-shadow .15s ease; }
     .card:hover { box-shadow: 0 18px 36px rgba(0,0,0,.3); }
     .timer {
@@ -525,99 +558,115 @@
       </div>
 
       <div id="adminContent" class="hidden" style="margin-top:12px;">
-        <h2 style="margin-top:0;">📷 Caméra</h2>
+        <div class="row">
+          <button id="btnCameraToggle" class="primary full" type="button">📷 Activer la caméra</button>
+        </div>
         <p id="cameraAdminNote" class="note">Caméra inactive.</p>
-        <div class="row"><button id="btnCamera" class="primary full" type="button">📷 Autoriser / démarrer la caméra</button></div>
-
-        <h2 style="margin-top:20px;">⚙️ Mode de course</h2>
         <div class="row">
-          <button type="button" class="secondary mode-btn full" data-mode="relais" style="flex:1;">🔁 Relais (démarreur + relayeur)</button>
-          <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">🙋 Individuel (coureur seul)</button>
+          <button id="btnScanQr" class="secondary full" type="button">📷 Scanner un QR code (résultats d'un autre appareil)</button>
         </div>
 
-        <h2 style="margin-top:20px;">⏱️ Temps du décompte</h2>
-        <div class="stepper-row">
-          <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
-          <div id="secondsDisplay" class="seconds-display" aria-live="polite">12s</div>
-          <button id="btnPlus" class="success stepper-btn" type="button">+</button>
-        </div>
-        <input id="seconds" type="hidden" value="12" />
-
-        <h2 style="margin-top:20px;">📏 Unité de l'écart à la cible</h2>
-        <div class="row">
-          <button type="button" class="secondary unit-btn full" data-unit="plots" style="flex:1;">📏 Plots</button>
-          <button type="button" class="secondary unit-btn full" data-unit="metres" style="flex:1;">📐 Mètres</button>
+        <div class="admin-tabs" role="tablist">
+          <button type="button" class="admin-tab-btn active" data-tab="course">🏁 Réglages de course</button>
+          <button type="button" class="admin-tab-btn" data-tab="classe">👥 Classe</button>
+          <button type="button" class="admin-tab-btn" data-tab="galerie">🖼️ Galerie</button>
         </div>
 
-        <h2 style="margin-top:20px;">🎯 Course individuelle</h2>
-        <div class="row">
-          <label class="checkbox-row" for="targetEnabledCheckbox" style="flex:1;">
-            <input type="checkbox" id="targetEnabledCheckbox" />
-            Indiquer une cible par élève
-          </label>
-          <button type="button" id="btnTargetInfo" class="info-btn" aria-label="Plus d'informations">i</button>
-        </div>
-        <p id="targetExplainNote" class="note hidden" style="margin-top:6px;">
-          À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
-        </p>
-
-        <h2 style="margin-top:20px;">👥 Classes</h2>
-        <div class="row">
-          <div class="field">
-            <label for="classSelect">Classe active</label>
-            <select id="classSelect"></select>
+        <div class="admin-tab-panel" data-tab-panel="course">
+          <h2 style="margin-top:0;">⚙️ Mode de course</h2>
+          <div class="row">
+            <button type="button" class="secondary mode-btn full" data-mode="relais" style="flex:1;">🔁 Relais (démarreur + relayeur)</button>
+            <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">🙋 Individuel (coureur seul)</button>
           </div>
-        </div>
-        <div class="row">
-          <div class="field">
-            <label for="newClassName">Nouvelle classe</label>
-            <input id="newClassName" type="text" placeholder="Ex. 6°1" autocomplete="off" />
+
+          <h2 style="margin-top:20px;">⏱️ Temps du décompte</h2>
+          <div class="stepper-row">
+            <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
+            <div id="secondsDisplay" class="seconds-display" aria-live="polite">12s</div>
+            <button id="btnPlus" class="success stepper-btn" type="button">+</button>
           </div>
-        </div>
-        <div class="row">
-          <button id="btnCreateClass" class="success full" type="button">➕ Créer cette classe</button>
-        </div>
-        <div class="row">
-          <button id="btnRenameClass" class="secondary" type="button" style="flex:1;">✏️ Renommer</button>
-          <button id="btnDeleteClass" class="danger" type="button" style="flex:1;">🗑️ Supprimer</button>
+          <input id="seconds" type="hidden" value="12" />
+
+          <h2 style="margin-top:20px;">📏 Unité de l'écart à la cible</h2>
+          <div class="row">
+            <button type="button" class="secondary unit-btn full" data-unit="plots" style="flex:1;">📏 Plots</button>
+            <button type="button" class="secondary unit-btn full" data-unit="metres" style="flex:1;">📐 Mètres</button>
+          </div>
+
+          <h2 style="margin-top:20px;">🎯 Course individuelle</h2>
+          <div class="row">
+            <label class="checkbox-row" for="targetEnabledCheckbox" style="flex:1;">
+              <input type="checkbox" id="targetEnabledCheckbox" />
+              Indiquer une cible par élève
+            </label>
+            <button type="button" id="btnTargetInfo" class="info-btn" aria-label="Plus d'informations">i</button>
+          </div>
+          <p id="targetExplainNote" class="note hidden" style="margin-top:6px;">
+            À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
+          </p>
         </div>
 
-        <h2 style="margin-top:20px;">📥 Importer des élèves (Pronote)</h2>
-        <div class="row">
-          <div class="field">
-            <label for="classFile">Fichier — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
-            <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
+        <div class="admin-tab-panel hidden" data-tab-panel="classe">
+          <h2 style="margin-top:0;">👥 Classes</h2>
+          <div class="row">
+            <div class="field">
+              <label for="classSelect">Classe active</label>
+              <select id="classSelect"></select>
+            </div>
           </div>
-        </div>
-        <div class="row">
-          <button id="btnClearRoster" class="secondary" type="button">🗑️ Vider les élèves de la classe active</button>
-        </div>
-        <p id="rosterStatus" class="note">Aucune classe active.</p>
+          <div class="row">
+            <div class="field">
+              <label for="newClassName">Nouvelle classe</label>
+              <input id="newClassName" type="text" placeholder="Ex. 6°1" autocomplete="off" />
+            </div>
+          </div>
+          <div class="row">
+            <button id="btnCreateClass" class="success full" type="button">➕ Créer cette classe</button>
+          </div>
+          <div class="row">
+            <button id="btnRenameClass" class="secondary" type="button" style="flex:1;">✏️ Renommer</button>
+            <button id="btnDeleteClass" class="danger" type="button" style="flex:1;">🗑️ Supprimer</button>
+          </div>
 
-        <h2 style="margin-top:20px;">➕ Ajouter un élève</h2>
-        <div class="row">
-          <div class="field">
-            <label for="addNom">Nom</label>
-            <input id="addNom" type="text" placeholder="Ex. Martin" autocomplete="off" />
+          <h2 style="margin-top:20px;">📥 Importer des élèves (Pronote)</h2>
+          <div class="row">
+            <div class="field">
+              <label for="classFile">Fichier — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
+              <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
+            </div>
           </div>
-          <div class="field">
-            <label for="addPrenom">Prénom</label>
-            <input id="addPrenom" type="text" placeholder="Ex. Lucas" autocomplete="off" />
+          <div class="row">
+            <button id="btnClearRoster" class="secondary" type="button">🗑️ Vider les élèves de la classe active</button>
           </div>
-        </div>
-        <div class="row hidden" id="addCibleRow">
-          <div class="field" style="max-width:200px;">
-            <label for="addCible">Cible</label>
-            <input id="addCible" type="text" inputmode="decimal" placeholder="Ex. 3,20" autocomplete="off" />
-          </div>
-        </div>
-        <div class="row"><button id="btnAddStudent" class="success full" type="button">➕ Ajouter à la classe active</button></div>
+          <p id="rosterStatus" class="note">Aucune classe active.</p>
 
-        <h2 style="margin-top:20px;">👥 Élèves de la classe active (<span id="rosterCount">0</span>)</h2>
-        <div id="rosterManageList" class="roster-manage-list"></div>
+          <h2 style="margin-top:20px;">➕ Ajouter un élève</h2>
+          <div class="row">
+            <div class="field">
+              <label for="addNom">Nom</label>
+              <input id="addNom" type="text" placeholder="Ex. Martin" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="addPrenom">Prénom</label>
+              <input id="addPrenom" type="text" placeholder="Ex. Lucas" autocomplete="off" />
+            </div>
+          </div>
+          <div class="row hidden" id="addCibleRow">
+            <div class="field" style="max-width:200px;">
+              <label for="addCible">Cible</label>
+              <input id="addCible" type="text" inputmode="decimal" placeholder="Ex. 3,20" autocomplete="off" />
+            </div>
+          </div>
+          <div class="row"><button id="btnAddStudent" class="success full" type="button">➕ Ajouter à la classe active</button></div>
 
-        <h2 style="margin-top:20px;">🖼️ Galerie</h2>
-        <div class="row"><button id="btnClearGallery" class="secondary full" type="button">🗑️ Effacer la galerie</button></div>
+          <h2 style="margin-top:20px;">👥 Élèves de la classe active (<span id="rosterCount">0</span>)</h2>
+          <div id="rosterManageList" class="roster-manage-list"></div>
+        </div>
+
+        <div class="admin-tab-panel hidden" data-tab-panel="galerie">
+          <h2 style="margin-top:0;">🖼️ Galerie</h2>
+          <div class="row"><button id="btnClearGallery" class="secondary full" type="button">🗑️ Effacer la galerie</button></div>
+        </div>
       </div>
     </div>
   </div>
@@ -629,6 +678,15 @@
         <button id="btnStatsClose" class="secondary" type="button">✖️ Fermer</button>
       </div>
       <div id="statsResultsWrap" class="results-table-wrap" style="margin-top:12px;"></div>
+
+      <div class="row" style="margin-top:14px;">
+        <button id="btnStatsQrExport" class="secondary full" type="button">📱 Exporter en QR code</button>
+      </div>
+      <div id="qrExportWrap" class="qr-wrap hidden">
+        <div id="qrCodeCanvas" class="qr-box"></div>
+      </div>
+
+      <div id="importedStatsWrap"></div>
     </div>
   </div>
 
@@ -638,6 +696,10 @@
   <!-- Lecture des fichiers Excel (.xlsx) pour l'import de classe. Nécessite une connexion internet
        au moment de l'import uniquement (le CSV, lui, fonctionne toujours hors-ligne). -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+  <!-- Génération et lecture de QR codes pour transférer les résultats (Stats) entre appareils,
+       sans passer par les photos. Nécessitent une connexion internet au premier chargement. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js" defer></script>
 
   <script>
     const $ = (id) => document.getElementById(id);
@@ -649,8 +711,15 @@
     const relayeurRow = $('relayeurRow');
     const relayeurSelect = $('relayeurSelect');
     const relayeurManual = $('relayeurManual');
-    const btnCamera = $('btnCamera');
+    const btnCameraToggle = $('btnCameraToggle');
     const cameraAdminNote = $('cameraAdminNote');
+    const btnScanQr = $('btnScanQr');
+    const adminTabButtons = Array.from(document.querySelectorAll('.admin-tab-btn'));
+    const adminTabPanels = Array.from(document.querySelectorAll('.admin-tab-panel'));
+    const btnStatsQrExport = $('btnStatsQrExport');
+    const qrExportWrap = $('qrExportWrap');
+    const qrCodeCanvas = $('qrCodeCanvas');
+    const importedStatsWrap = $('importedStatsWrap');
     const btnStart = $('btnStart');
     const btnReset = $('btnReset');
     const btnMinus = $('btnMinus');
@@ -712,7 +781,7 @@
     const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.12.0';
+    const APP_VERSION = '1.13.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -730,6 +799,7 @@
     const MODE_STORAGE_KEY = 'relais12s_mode_v1';
     const TARGET_ENABLED_STORAGE_KEY = 'relais12s_target_enabled_v1';
     const ECART_UNIT_STORAGE_KEY = 'relais12s_ecart_unit_v1';
+    const IMPORTED_STATS_STORAGE_KEY = 'relais12s_imported_stats_v1';
     const MAX_GALLERY_ITEMS = 200;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
@@ -738,6 +808,10 @@
     let roster = []; // toujours un alias des élèves de la classe active (voir syncRosterAlias)
     let raceMode = 'relais';
     let targetEnabled = false;
+    let importedStats = []; // résultats reçus par QR d'autres appareils (Stats uniquement, pas de photos)
+    let qrScanning = false;
+    let qrScanCanvas = null;
+    let qrCodeInstance = null;
     let ecartUnit = 'plots';
 
     // ---- Mode de course : relais (démarreur + relayeur) ou individuel (coureur seul) ----
@@ -1041,11 +1115,165 @@
 
     function openStats() {
       statsOverlay.classList.remove('hidden');
+      qrExportWrap.classList.add('hidden');
       renderResultsTable();
+      renderImportedStats();
     }
 
     function closeStats() {
       statsOverlay.classList.add('hidden');
+    }
+
+    // ---- Transfert des résultats (Stats uniquement, jamais les photos) entre appareils via QR
+    // code : utile quand plusieurs iPads élèves tournent en parallèle et qu'il faut ramener
+    // leurs résultats sur l'appareil principal, sans câble ni compte partagé. ----
+
+    function buildStatsQrPayload() {
+      const rows = computeResultsByStudent();
+      const cls = getActiveClass();
+      return JSON.stringify({
+        v: 1,
+        cls: cls ? cls.name : null,
+        rows: rows.map((r) => [r.name, r.target, r.count, r.noted, r.avg === null ? null : Math.round(r.avg * 10) / 10, r.best]),
+      });
+    }
+
+    function exportStatsQr() {
+      const rows = computeResultsByStudent();
+      if (!rows.length) {
+        alert('Aucune donnée à exporter pour le moment.');
+        return;
+      }
+      if (typeof QRCode === 'undefined') {
+        alert('La génération de QR code nécessite une connexion internet au premier chargement de l’appli.');
+        return;
+      }
+      qrCodeCanvas.innerHTML = '';
+      qrCodeInstance = new QRCode(qrCodeCanvas, {
+        text: buildStatsQrPayload(),
+        width: 240,
+        height: 240,
+        correctLevel: QRCode.CorrectLevel.L,
+      });
+      qrExportWrap.classList.remove('hidden');
+    }
+
+    function loadImportedStats() {
+      try {
+        const raw = localStorage.getItem(IMPORTED_STATS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) importedStats = parsed;
+        }
+      } catch (err) {
+        console.warn('Impossible de charger les résultats importés', err);
+        importedStats = [];
+      }
+    }
+
+    function saveImportedStats() {
+      try { localStorage.setItem(IMPORTED_STATS_STORAGE_KEY, JSON.stringify(importedStats)); } catch (err) {}
+    }
+
+    function renderImportedStats() {
+      if (!importedStats.length) {
+        importedStatsWrap.innerHTML = '';
+        return;
+      }
+      importedStatsWrap.innerHTML = `
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:18px;">
+          <h2 style="margin:0;">📥 Résultats importés (QR)</h2>
+          <button type="button" class="secondary" id="btnClearImportedStats">🗑️ Effacer les imports</button>
+        </div>
+        ${importedStats.map((entry) => `
+          <div class="results-table-wrap" style="margin-top:10px;">
+            <p class="note" style="margin-bottom:6px;">${escapeHtml(entry.source)}</p>
+            <table class="results-table">
+              <thead>
+                <tr><th>Élève</th><th>Cible visée</th><th>Tentatives</th><th>Notées</th><th>Moyenne</th><th>Meilleur écart</th></tr>
+              </thead>
+              <tbody>
+                ${entry.rows.map((row) => {
+                  const [name, target, count, noted, avg, best] = row;
+                  return `<tr>
+                    <td>${escapeHtml(name)}</td>
+                    <td class="num">${target === null || target === undefined ? '—' : formatTarget(target)}</td>
+                    <td class="num">${count}</td>
+                    <td class="num">${noted}</td>
+                    <td class="num">${avg === null || avg === undefined ? '—' : (avg > 0 ? '+' : '') + avg.toFixed(1)}</td>
+                    <td class="num">${best === null || best === undefined ? '—' : ecartLabel(best)}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+      `;
+      const btn = $('btnClearImportedStats');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (!confirm('Effacer tous les résultats importés par QR code ?')) return;
+          importedStats = [];
+          saveImportedStats();
+          renderImportedStats();
+        });
+      }
+    }
+
+    function handleScannedQrPayload(text) {
+      let payload;
+      try { payload = JSON.parse(text); } catch (err) { alert('QR code non reconnu.'); return; }
+      if (!payload || !Array.isArray(payload.rows)) { alert('QR code non reconnu.'); return; }
+      importedStats.push({
+        id: makeId(),
+        source: payload.cls || 'Appareil scanné',
+        importedAt: new Date().toISOString(),
+        rows: payload.rows,
+      });
+      saveImportedStats();
+      renderImportedStats();
+      alert(`Résultats importés : ${payload.rows.length} élève(s)${payload.cls ? ` (${payload.cls})` : ''}.`);
+    }
+
+    async function startQrScan() {
+      if (qrScanning) return;
+      if (typeof jsQR === 'undefined') {
+        alert('Le scan de QR code nécessite une connexion internet au premier chargement de l’appli.');
+        return;
+      }
+      const ready = await ensureCameraReady();
+      if (!ready) {
+        alert('Caméra indisponible pour scanner un QR code.');
+        return;
+      }
+      qrScanning = true;
+      btnScanQr.disabled = true;
+      btnScanQr.textContent = '🔎 Scan en cours... (vise le QR code)';
+      qrScanCanvas = qrScanCanvas || document.createElement('canvas');
+      const tick = () => {
+        if (!qrScanning) return;
+        if (video.readyState >= 2 && video.videoWidth) {
+          qrScanCanvas.width = video.videoWidth;
+          qrScanCanvas.height = video.videoHeight;
+          const ctx = qrScanCanvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, qrScanCanvas.width, qrScanCanvas.height);
+          const imageData = ctx.getImageData(0, 0, qrScanCanvas.width, qrScanCanvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code && code.data) {
+            stopQrScan();
+            handleScannedQrPayload(code.data);
+            return;
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+
+    function stopQrScan() {
+      qrScanning = false;
+      btnScanQr.disabled = false;
+      btnScanQr.textContent = "📷 Scanner un QR code (résultats d'un autre appareil)";
     }
 
     // ---- Import de classe (Pronote : colonne A = Nom, colonne B = Prénom) ----
@@ -1532,7 +1760,9 @@
 
     function syncCameraAdminUI() {
       const active = isCameraLive();
-      btnCamera.classList.toggle('hidden', active);
+      btnCameraToggle.textContent = active ? '📷 Désactiver la caméra' : '📷 Activer la caméra';
+      btnCameraToggle.classList.toggle('primary', !active);
+      btnCameraToggle.classList.toggle('danger', active);
       cameraAdminNote.textContent = active ? 'Caméra active — prête pour les prises de vue.' : 'Caméra inactive.';
     }
 
@@ -1925,7 +2155,6 @@
         photoIndex += 1;
         addToGallery(url, { mode: raceMode, duration: durationSeconds, starter, relayeur, ecart: null, targetMeters, createdAt: new Date().toISOString() });
         openPhotoAnalysis(0);
-        setStatus('Photo capturée — note l’écart à la cible dans la fenêtre ouverte');
       } catch (err) {
         console.error(err);
         setStatus('Erreur pendant la capture');
@@ -2020,6 +2249,7 @@
 
     function closeAdmin() {
       adminOverlay.classList.add('hidden');
+      if (qrScanning) stopQrScan();
       wakeVideoPreview();
     }
 
@@ -2035,10 +2265,16 @@
       }
     }
 
+    function setAdminTab(tab) {
+      adminTabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
+      adminTabPanels.forEach((panel) => panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab));
+    }
+
     function showAdminContent() {
       adminGate.classList.add('hidden');
       adminContent.classList.remove('hidden');
       syncAdminLockButtonVisibility();
+      setAdminTab('course');
       renderRosterManageList();
       refreshCameraState();
     }
@@ -2056,12 +2292,15 @@
     btnAdminLock.addEventListener('click', lockAdmin);
     btnStats.addEventListener('click', openStats);
     btnStatsClose.addEventListener('click', closeStats);
+    btnStatsQrExport.addEventListener('click', exportStatsQr);
+    btnScanQr.addEventListener('click', () => { if (qrScanning) stopQrScan(); else startQrScan(); });
     statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) closeStats(); });
     btnPhotoClose.addEventListener('click', closePhotoAnalysis);
     btnPhotoSaveClose.addEventListener('click', trySaveAndClosePhotoAnalysis);
     photoOverlay.addEventListener('click', (e) => { if (e.target === photoOverlay) closePhotoAnalysis(); });
     modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
     unitButtons.forEach((btn) => btn.addEventListener('click', () => setEcartUnit(btn.dataset.unit)));
+    adminTabButtons.forEach((btn) => btn.addEventListener('click', () => setAdminTab(btn.dataset.tab)));
     targetEnabledCheckbox.addEventListener('change', () => setTargetEnabled(targetEnabledCheckbox.checked));
     btnAddStudent.addEventListener('click', () => {
       addStudent(addNom.value, addPrenom.value, addCible.value);
@@ -2073,7 +2312,10 @@
 
     btnMinus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) - 1));
     btnPlus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) + 1));
-    btnCamera.addEventListener('click', () => startCamera());
+    btnCameraToggle.addEventListener('click', () => {
+      if (isCameraLive()) stopCamera();
+      else startCamera();
+    });
     btnStart.addEventListener('click', startCountdown);
     btnStop.addEventListener('click', () => {
       stopCountdown();
@@ -2119,6 +2361,7 @@
     loadGallery();
     renderEcartPanel();
     loadClasses();
+    loadImportedStats();
     refreshCameraState();
     const versionTag = $('versionTag');
     if (versionTag) versionTag.textContent = `v${APP_VERSION}`;
