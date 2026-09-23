@@ -247,25 +247,29 @@
     .thumb .meta { padding: 8px 10px; font-size: .84rem; color: var(--muted); line-height: 1.3; }
     .note { color: var(--muted); font-size: .94rem; line-height: 1.4; }
     .ecart-panel { margin-top: 16px; }
-    .ecart-slider-wrap { margin-top: 12px; }
-    input[type="range"]#ecartSlider {
-      width: 100%;
-      height: 10px;
-      cursor: pointer;
-    }
-    input[type="range"]#ecartSlider:disabled { cursor: not-allowed; opacity: .4; }
-    .ecart-scale {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 4px;
-    }
-    .ecart-slider-value {
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 900;
+    .ecart-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 7px;
       margin-top: 12px;
-      min-height: 1.9rem;
     }
+    .ecart-btn {
+      min-height: 46px;
+      padding: 4px 2px;
+      border-radius: 13px;
+      font-weight: 900;
+      font-size: .92rem;
+      color: white;
+      border: 2px solid transparent;
+      text-shadow: 0 1px 3px rgba(0,0,0,.35);
+    }
+    .ecart-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); }
+    .ecart-btn.selected {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 3px rgba(255,255,255,.32);
+      transform: scale(1.07);
+    }
+    .ecart-btn.zero { grid-column: span 1; font-size: .8rem; }
     .ecart-tag { font-weight: 800; }
     .ecart-tag.neg { color: #f87171; }
     .ecart-tag.pos { color: #4ade80; }
@@ -424,26 +428,7 @@
             <div class="pill">Caméra arrière</div>
           </div>
         </div>
-
-        <div class="gallery latest-box">
-          <h2>🖼️ Dernière photo finish</h2>
-          <img id="photo" alt="Dernière photo capturée" class="hidden" />
-          <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">⬇️ Télécharger la dernière photo</a>
-        </div>
-
-        <div class="ecart-panel">
-          <h2 id="ecartPanelTitle">🎯 Écart à la cible</h2>
-          <p id="ecartHint" class="note">Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.</p>
-          <div class="ecart-slider-wrap">
-            <input id="ecartSlider" type="range" min="-10" max="10" step="1" value="0" disabled />
-            <div class="ecart-scale">
-              <span class="note" id="ecartScaleMin">-10</span>
-              <span class="note">Cible</span>
-              <span class="note" id="ecartScaleMax">+10</span>
-            </div>
-            <div id="ecartSliderValue" class="ecart-slider-value">—</div>
-          </div>
-        </div>
+        <p class="note" style="margin-top:10px;">Après chaque bip, l'analyse de la photo finish s'ouvre automatiquement pour noter l'écart. Tu peux la fermer et y revenir plus tard depuis la galerie ci-dessous.</p>
 
         <div class="gallery">
           <h2>🖼️ Galerie des photos finish</h2>
@@ -454,6 +439,28 @@
           </div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <div id="photoOverlay" class="admin-overlay hidden">
+    <div class="card admin-modal">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;">🔎 Analyse de la photo finish</h2>
+        <button id="btnPhotoClose" class="secondary" type="button">✖️ Fermer</button>
+      </div>
+      <p id="photoParticipants" class="note" style="margin-top:8px;"></p>
+      <p id="photoTargetBadge" class="target-badge hidden"></p>
+
+      <div class="latest-box">
+        <img id="photo" alt="Photo capturée" class="hidden" />
+        <a id="downloadLink" class="dl full hidden" download="photo-finish-relais12s.jpg">⬇️ Télécharger cette photo</a>
+      </div>
+
+      <div class="ecart-panel">
+        <h2 id="ecartPanelTitle">🎯 Écart à la cible</h2>
+        <p id="ecartHint" class="note"></p>
+        <div id="ecartButtons" class="ecart-buttons-grid"></div>
+      </div>
     </div>
   </div>
 
@@ -607,9 +614,12 @@
     const rosterStatus = $('rosterStatus');
     const rosterCount = $('rosterCount');
     const rosterManageList = $('rosterManageList');
-    const ecartSlider = $('ecartSlider');
-    const ecartSliderValue = $('ecartSliderValue');
+    const ecartButtons = $('ecartButtons');
     const ecartHint = $('ecartHint');
+    const photoOverlay = $('photoOverlay');
+    const btnPhotoClose = $('btnPhotoClose');
+    const photoParticipants = $('photoParticipants');
+    const photoTargetBadge = $('photoTargetBadge');
     const btnExportCsv = $('btnExportCsv');
     const btnInstall = $('btnInstall');
     const updateBanner = $('updateBanner');
@@ -636,12 +646,10 @@
     const btnStatsClose = $('btnStatsClose');
     const statsResultsWrap = $('statsResultsWrap');
     const ecartPanelTitle = $('ecartPanelTitle');
-    const ecartScaleMin = $('ecartScaleMin');
-    const ecartScaleMax = $('ecartScaleMax');
     const unitButtons = Array.from(document.querySelectorAll('.unit-btn'));
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.8.0';
+    const APP_VERSION = '1.9.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -758,14 +766,12 @@
       unitButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.unit === ecartUnit));
       const isMetres = ecartUnit === 'metres';
       ecartPanelTitle.textContent = isMetres ? '🎯 Écart à la cible (en mètres)' : '🎯 Écart à la cible (en plots)';
-      ecartScaleMin.textContent = isMetres ? '-10 m' : '-10 plots';
-      ecartScaleMax.textContent = isMetres ? '+10 m' : '+10 plots';
       renderEcartPanel();
       renderGallery({ keepSelection: true });
       refreshStatsLiveView();
     }
 
-    // ---- Notation de l'écart à la cible (plots ou mètres), -10 à +10, via curseur ----
+    // ---- Notation de l'écart à la cible (plots ou mètres), -10 à +10, via boutons colorés ----
 
     function ecartKind(value) {
       if (value === 0) return 'target';
@@ -775,6 +781,20 @@
     function ecartColor(value) {
       if (value === 0) return '#5ba1ff';
       return value < 0 ? '#ef4444' : '#22c55e';
+    }
+
+    // Dégradé rouge (−10) → bleu (cible) → vert (+10), calculé une fois par bouton.
+    function lerpChannel(a, b, t) { return Math.round(a + (b - a) * t); }
+    function lerpColor(c1, c2, t) {
+      return `rgb(${lerpChannel(c1[0], c2[0], t)}, ${lerpChannel(c1[1], c2[1], t)}, ${lerpChannel(c1[2], c2[2], t)})`;
+    }
+    const ECART_COLOR_NEG = [239, 68, 68];
+    const ECART_COLOR_MID = [91, 161, 255];
+    const ECART_COLOR_POS = [34, 197, 94];
+    function ecartButtonColor(value) {
+      if (value === 0) return `rgb(${ECART_COLOR_MID.join(',')})`;
+      if (value < 0) return lerpColor(ECART_COLOR_NEG, ECART_COLOR_MID, (value + 10) / 10);
+      return lerpColor(ECART_COLOR_MID, ECART_COLOR_POS, value / 10);
     }
 
     function ecartLabel(value) {
@@ -795,24 +815,36 @@
       return [meta.starter, meta.relayeur].filter(Boolean).join(' → ');
     }
 
+    function buildEcartButtons() {
+      const values = [];
+      for (let v = -10; v <= 10; v++) values.push(v);
+      ecartButtons.innerHTML = values.map((v) => {
+        const label = v === 0 ? 'Cible' : (v > 0 ? `+${v}` : String(v));
+        return `<button type="button" class="ecart-btn${v === 0 ? ' zero' : ''}" data-value="${v}" style="background:${ecartButtonColor(v)};" disabled>${label}</button>`;
+      }).join('');
+      ecartButtons.querySelectorAll('.ecart-btn').forEach((btn) => {
+        btn.addEventListener('click', () => setEcart(Number(btn.dataset.value)));
+      });
+    }
+
     function renderEcartPanel() {
       const hasAttempt = currentAttemptIndex >= 0 && galleryItems[currentAttemptIndex];
       const item = hasAttempt ? galleryItems[currentAttemptIndex] : null;
       const noted = hasAttempt && item.meta.ecart !== null && item.meta.ecart !== undefined;
-      const currentValue = noted ? item.meta.ecart : 0;
+      const currentValue = noted ? item.meta.ecart : null;
 
-      ecartSlider.disabled = !hasAttempt;
-      ecartSlider.value = String(currentValue);
-      const color = hasAttempt ? ecartColor(currentValue) : '#5d6f90';
-      ecartSlider.style.accentColor = color;
-      ecartSliderValue.style.color = hasAttempt ? color : 'var(--muted)';
-      ecartSliderValue.textContent = hasAttempt ? (noted ? ecartLabel(currentValue) : 'Non noté — glisse le curseur') : '—';
+      ecartButtons.querySelectorAll('.ecart-btn').forEach((btn) => {
+        btn.disabled = !hasAttempt;
+        btn.classList.toggle('selected', hasAttempt && noted && Number(btn.dataset.value) === currentValue);
+      });
 
       if (!hasAttempt) {
-        ecartHint.textContent = "Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.";
+        ecartHint.textContent = "Capture une photo pour pouvoir noter l'écart.";
       } else {
         const who = participantsLabel(item.meta);
-        ecartHint.textContent = who ? `Notation en cours pour : ${who}` : 'Notation en cours';
+        ecartHint.textContent = noted
+          ? (who ? `Écart noté pour : ${who}` : 'Écart noté')
+          : (who ? `Choisis l'écart pour : ${who}` : "Choisis l'écart à noter ci-dessous");
       }
     }
 
@@ -824,15 +856,6 @@
       renderGallery({ keepSelection: true });
       refreshStatsLiveView();
     }
-
-    ecartSlider.addEventListener('input', () => {
-      const v = Number(ecartSlider.value);
-      const color = ecartColor(v);
-      ecartSlider.style.accentColor = color;
-      ecartSliderValue.style.color = color;
-      ecartSliderValue.textContent = ecartLabel(v);
-    });
-    ecartSlider.addEventListener('change', () => setEcart(Number(ecartSlider.value)));
 
     function csvEscape(value) {
       const s = String(value ?? '');
@@ -1430,18 +1453,42 @@
       return out;
     }
 
-    function showPhoto(url, index = 0) {
-      photo.src = url;
+    // ---- Popup d'analyse de la photo finish : s'ouvre automatiquement après chaque capture,
+    // se ferme manuellement, et se rouvre à tout moment depuis une vignette de la galerie. ----
+
+    function openPhotoAnalysis(index) {
+      const item = galleryItems[index];
+      if (!item) return;
+      currentAttemptIndex = index;
+
+      photo.src = item.url;
       photo.classList.remove('hidden');
-      downloadLink.href = url;
+      downloadLink.href = item.url;
       downloadLink.download = `photo-finish-relais12s-${String(index + 1).padStart(3, '0')}.jpg`;
       downloadLink.classList.remove('hidden');
-      currentAttemptIndex = index;
+
+      const who = participantsLabel(item.meta);
+      photoParticipants.textContent = who
+        ? `${item.meta.mode === 'individuel' ? 'Coureur' : 'Passage'} : ${who} — décompte ${item.meta.duration}s`
+        : `Décompte ${item.meta.duration}s`;
+
+      const target = item.meta.targetMeters;
+      if (target !== null && target !== undefined) {
+        photoTargetBadge.textContent = `🎯 Cible à atteindre : ${formatMeters(target)} m`;
+        photoTargetBadge.classList.remove('hidden');
+      } else {
+        photoTargetBadge.classList.add('hidden');
+      }
+
       renderEcartPanel();
+      photoOverlay.classList.remove('hidden');
+    }
+
+    function closePhotoAnalysis() {
+      photoOverlay.classList.add('hidden');
     }
 
     function renderGallery(options = {}) {
-      const { keepSelection = false } = options;
       galleryGrid.innerHTML = '';
       galleryItems.forEach((item, index) => {
         const ecart = item.meta.ecart;
@@ -1460,16 +1507,13 @@
               : `<div>Démarreur : ${escapeHtml(item.meta.starter) || '—'}</div><div>Relayeur : ${escapeHtml(item.meta.relayeur) || '—'}</div>`}
           </div>
         `;
-        btn.addEventListener('click', () => showPhoto(item.url, index));
+        btn.addEventListener('click', () => openPhotoAnalysis(index));
         galleryGrid.appendChild(btn);
       });
       galleryEmpty.classList.toggle('hidden', galleryItems.length > 0);
       // L'export CSV ne devient accessible qu'une fois la bibliothèque de photos non vide,
       // pour éviter toute confusion avant la première capture.
       btnExportCsv.disabled = galleryItems.length === 0;
-      if (!keepSelection && galleryItems.length > 0 && photo.classList.contains('hidden')) {
-        showPhoto(galleryItems[0].url, 0);
-      }
     }
 
     function saveGallery() {
@@ -1511,8 +1555,7 @@
     function addToGallery(url, meta) {
       galleryItems.unshift({ url, meta });
       galleryItems = galleryItems.slice(0, MAX_GALLERY_ITEMS);
-      showPhoto(url, 0); // affiche la nouvelle capture et sélectionne l'écart à noter
-      renderGallery({ keepSelection: true });
+      renderGallery();
       saveGallery();
       refreshStatsLiveView();
     }
@@ -1527,6 +1570,7 @@
       downloadLink.removeAttribute('href');
       downloadLink.classList.add('hidden');
       btnExportCsv.disabled = true;
+      closePhotoAnalysis();
       try {
         localStorage.removeItem(GALLERY_STORAGE_KEY);
       } catch (err) {}
@@ -1556,9 +1600,18 @@
         const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, raceMode);
         const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
 
+        // On fige la cible (en mètres) de l'élève au moment de la capture, pour que la popup
+        // d'analyse affiche toujours la bonne cible même si la sélection change ensuite.
+        let targetMeters = null;
+        if (raceMode === 'individuel' && targetEnabled && starterSelect.value && starterSelect.value !== MANUAL_OPTION) {
+          const student = roster.find((s) => s.display === starterSelect.value);
+          if (student && student.cible !== null && student.cible !== undefined) targetMeters = student.cible;
+        }
+
         photoIndex += 1;
-        addToGallery(url, { mode: raceMode, duration: durationSeconds, starter, relayeur, ecart: null, createdAt: new Date().toISOString() });
-        setStatus('Photo capturée — note l’écart à la cible ci-dessous');
+        addToGallery(url, { mode: raceMode, duration: durationSeconds, starter, relayeur, ecart: null, targetMeters, createdAt: new Date().toISOString() });
+        openPhotoAnalysis(0);
+        setStatus('Photo capturée — note l’écart à la cible dans la fenêtre ouverte');
       } catch (err) {
         console.error(err);
         setStatus('Erreur pendant la capture');
@@ -1583,7 +1636,33 @@
       setStatus('Décompte remis à zéro');
     }
 
+    // On ne peut pas démarrer un passage sans nom de coureur (ou démarreur + relayeur en
+    // relais) : évite les photos finish sans identité exploitable.
+    function validateParticipants() {
+      const starter = getSelectedName(starterSelect, starterManual);
+      if (!starter) {
+        alert(raceMode === 'individuel'
+          ? "Choisis ou saisis le nom du coureur avant de démarrer."
+          : "Choisis ou saisis le nom du démarreur avant de démarrer.");
+        starterSelect.focus();
+        return false;
+      }
+      if (raceMode !== 'individuel') {
+        const relayeur = getSelectedName(relayeurSelect, relayeurManual);
+        if (!relayeur) {
+          alert("Choisis ou saisis le nom du relayeur avant de démarrer.");
+          relayeurSelect.focus();
+          return false;
+        }
+      }
+      return true;
+    }
+
     async function startCountdown() {
+      if (!validateParticipants()) {
+        setStatus('Nom du coureur manquant — décompte non démarré');
+        return;
+      }
       ensureAudio();
       stopCountdown();
       remaining = clampSeconds(secondsInput.value);
@@ -1657,6 +1736,8 @@
     btnStats.addEventListener('click', openStats);
     btnStatsClose.addEventListener('click', closeStats);
     statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) closeStats(); });
+    btnPhotoClose.addEventListener('click', closePhotoAnalysis);
+    photoOverlay.addEventListener('click', (e) => { if (e.target === photoOverlay) closePhotoAnalysis(); });
     modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
     unitButtons.forEach((btn) => btn.addEventListener('click', () => setEcartUnit(btn.dataset.unit)));
     targetEnabledCheckbox.addEventListener('change', () => setTargetEnabled(targetEnabledCheckbox.checked));
@@ -1691,6 +1772,7 @@
     });
 
     updateSeconds(12);
+    buildEcartButtons();
     loadRaceMode();
     loadTargetSetting();
     loadEcartUnit();
