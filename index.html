@@ -58,14 +58,6 @@
       background: transparent;
     }
     .brand-text h1 { margin: 0; font-size: clamp(1.55rem, 3.2vw, 2.5rem); line-height: 1; }
-    .brand-text .sub {
-      margin-top: 6px;
-      color: var(--muted);
-      font-weight: 700;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      font-size: clamp(.82rem, 1.6vw, 1rem);
-    }
     .top-actions {
       display: flex;
       gap: 10px;
@@ -114,6 +106,14 @@
       padding-right: 40px;
     }
     select option { color: #0b1836; }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .checkbox-row input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
     .stepper-row {
       display: grid;
       grid-template-columns: 72px 1fr 72px;
@@ -266,7 +266,6 @@
     .ecart-tag.target { color: #60a5fa; }
     .ecart-tag.none { color: var(--muted); font-weight: 700; }
     .hidden { display: none !important; }
-    .footer { margin-top: 18px; color: var(--muted); font-size: .85rem; text-align: center; }
     a.dl {
       display: inline-flex;
       align-items: center;
@@ -330,7 +329,10 @@
       background: rgba(255,255,255,.05);
       border: 1px solid var(--card-border);
       margin-top: 6px;
+      flex-wrap: wrap;
     }
+    .roster-row span { flex: 1; min-width: 140px; }
+    .roster-target-input { width: 110px; padding: 8px 10px; font-size: .9rem; }
     .roster-remove { min-height: 36px; padding: 6px 14px; font-size: .85rem; }
     .results-table-wrap { overflow-x: auto; margin-top: 8px; }
     table.results-table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 480px; }
@@ -351,11 +353,11 @@
         <img class="logo" src="icon-square.png" alt="Icône Relais 12s" />
         <div class="brand-text">
           <h1>Relais 12s</h1>
-          <div class="sub">Photo finish automatique</div>
         </div>
       </div>
       <div class="top-actions">
         <button id="btnInstall" class="primary hidden" type="button">Installer l'application</button>
+        <button id="btnStats" class="secondary" type="button">📊 Stats</button>
         <button id="btnAdmin" class="secondary" type="button">🔒 Admin</button>
       </div>
     </div>
@@ -366,13 +368,12 @@
 
     <div class="grid">
       <section class="card">
-        <h2>Coureurs</h2>
-
         <div class="row">
           <div class="field">
             <label id="starterLabel" for="starterSelect">Démarreur</label>
             <select id="starterSelect"><option value="">— Choisir dans la classe —</option></select>
             <input id="starterManual" type="text" placeholder="Prénom (saisie manuelle)" autocomplete="off" class="hidden" style="margin-top:8px;" />
+            <p id="targetHint" class="note hidden" style="margin-top:6px;"></p>
           </div>
         </div>
 
@@ -384,17 +385,8 @@
           </div>
         </div>
 
-        <div class="row">
-          <div class="field">
-            <label>Décompte</label>
-            <div id="secondsReadoutMain" class="seconds-display">12s</div>
-            <p class="note" style="margin:4px 0 0;">Réglable dans Admin.</p>
-          </div>
-        </div>
-
-        <div class="row"><button id="btnCamera" class="primary full" type="button">Autoriser / démarrer la caméra</button></div>
         <div class="row"><button id="btnStart" class="success full" type="button">Démarrer</button></div>
-        <div class="row"><button id="btnReset" class="warn full" type="button">Réinitialiser le décompte</button></div>
+        <div class="row"><button id="btnReset" class="warn full" type="button">Remettre à zéro</button></div>
         <div class="row"><button id="btnStop" class="danger full" type="button" disabled>Arrêter</button></div>
 
         <div class="timer">
@@ -436,10 +428,7 @@
         </div>
 
         <div class="gallery">
-          <div class="row" style="justify-content:space-between;align-items:center;">
-            <h2 style="margin:0;">Galerie des photos finish</h2>
-            <button id="btnClearGallery" class="secondary" type="button">Effacer la galerie</button>
-          </div>
+          <h2>Galerie des photos finish</h2>
           <div id="galleryGrid" class="thumb-grid"></div>
           <p id="galleryEmpty" class="note">Aucune photo pour le moment.</p>
           <div class="row" style="margin-top:14px;">
@@ -448,8 +437,6 @@
         </div>
       </section>
     </div>
-
-    <div class="footer">PWA locale — fonctionne mieux en HTTPS ou après installation.</div>
   </div>
 
   <div id="adminOverlay" class="admin-overlay hidden">
@@ -482,6 +469,17 @@
           <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">Individuel (coureur seul)</button>
         </div>
 
+        <h2 style="margin-top:20px;">Course individuelle</h2>
+        <div class="row">
+          <label class="checkbox-row" for="targetEnabledCheckbox">
+            <input type="checkbox" id="targetEnabledCheckbox" />
+            Indiquer une cible (en mètres) par élève
+          </label>
+        </div>
+        <p id="targetExplainNote" class="note hidden" style="margin-top:6px;">
+          À l'import d'une classe : la cible se lit en colonne B si le fichier a « NOM Prénom » combinés en colonne A, ou en colonne C si Nom (colonne A) et Prénom (colonne B) sont séparés. Elle peut aussi être saisie ou corrigée élève par élève ci-dessous.
+        </p>
+
         <h2 style="margin-top:20px;">Temps du décompte</h2>
         <div class="stepper-row">
           <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
@@ -489,6 +487,10 @@
           <button id="btnPlus" class="success stepper-btn" type="button">+</button>
         </div>
         <input id="seconds" type="hidden" value="12" />
+
+        <h2 style="margin-top:20px;">Caméra</h2>
+        <p id="cameraAdminNote" class="note">Caméra inactive.</p>
+        <div class="row"><button id="btnCamera" class="primary full" type="button">Autoriser / démarrer la caméra</button></div>
 
         <h2 style="margin-top:20px;">Classe (import Pronote)</h2>
         <div class="row">
@@ -513,14 +515,31 @@
             <input id="addPrenom" type="text" placeholder="Ex. Lucas" autocomplete="off" />
           </div>
         </div>
+        <div class="row hidden" id="addCibleRow">
+          <div class="field" style="max-width:200px;">
+            <label for="addCible">Cible (m)</label>
+            <input id="addCible" type="text" inputmode="decimal" placeholder="Ex. 3,20" autocomplete="off" />
+          </div>
+        </div>
         <div class="row"><button id="btnAddStudent" class="success full" type="button">Ajouter à la classe</button></div>
 
         <h2 style="margin-top:20px;">Élèves de la classe (<span id="rosterCount">0</span>)</h2>
         <div id="rosterManageList" class="roster-manage-list"></div>
 
-        <h2 style="margin-top:20px;">Résultats par élève</h2>
-        <div id="resultsTableWrap" class="results-table-wrap"></div>
+        <h2 style="margin-top:20px;">Galerie</h2>
+        <div class="row"><button id="btnClearGallery" class="secondary full" type="button">Effacer la galerie</button></div>
       </div>
+    </div>
+  </div>
+
+  <div id="statsOverlay" class="admin-overlay hidden">
+    <div class="card admin-modal">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;">Statistiques</h2>
+        <button id="btnStatsClose" class="secondary" type="button">Fermer</button>
+      </div>
+      <p class="note" style="margin-top:8px;">Résultats par élève, mis à jour automatiquement.</p>
+      <div id="statsResultsWrap" class="results-table-wrap" style="margin-top:8px;"></div>
     </div>
   </div>
 
@@ -534,14 +553,15 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const secondsInput = $('seconds');
-    const secondsReadoutMain = $('secondsReadoutMain');
     const starterLabel = $('starterLabel');
     const starterSelect = $('starterSelect');
     const starterManual = $('starterManual');
+    const targetHint = $('targetHint');
     const relayeurRow = $('relayeurRow');
     const relayeurSelect = $('relayeurSelect');
     const relayeurManual = $('relayeurManual');
     const btnCamera = $('btnCamera');
+    const cameraAdminNote = $('cameraAdminNote');
     const btnStart = $('btnStart');
     const btnReset = $('btnReset');
     const btnMinus = $('btnMinus');
@@ -579,13 +599,20 @@
     const btnAdminUnlock = $('btnAdminUnlock');
     const btnAdminLock = $('btnAdminLock');
     const modeButtons = Array.from(document.querySelectorAll('.mode-btn'));
+    const targetEnabledCheckbox = $('targetEnabledCheckbox');
+    const targetExplainNote = $('targetExplainNote');
     const addNom = $('addNom');
     const addPrenom = $('addPrenom');
+    const addCibleRow = $('addCibleRow');
+    const addCible = $('addCible');
     const btnAddStudent = $('btnAddStudent');
-    const resultsTableWrap = $('resultsTableWrap');
+    const btnStats = $('btnStats');
+    const statsOverlay = $('statsOverlay');
+    const btnStatsClose = $('btnStatsClose');
+    const statsResultsWrap = $('statsResultsWrap');
     const MANUAL_OPTION = '__manual__';
     const ADMIN_CODE = '0000';
-    const APP_VERSION = '1.6.0';
+    const APP_VERSION = '1.7.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -599,11 +626,13 @@
     const GALLERY_STORAGE_KEY = 'relais12s_gallery_v2';
     const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
     const MODE_STORAGE_KEY = 'relais12s_mode_v1';
+    const TARGET_ENABLED_STORAGE_KEY = 'relais12s_target_enabled_v1';
     const MAX_GALLERY_ITEMS = 200;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
     let roster = [];
     let raceMode = 'relais';
+    let targetEnabled = false;
 
     // ---- Mode de course : relais (démarreur + relayeur) ou individuel (coureur seul) ----
 
@@ -626,6 +655,56 @@
       relayeurRow.classList.toggle('hidden', isIndividuel);
       starterLabel.textContent = isIndividuel ? 'Coureur' : 'Démarreur';
       modeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === raceMode));
+      updateTargetHint();
+    }
+
+    // ---- Cible individuelle (mètres) par élève ----
+
+    function loadTargetSetting() {
+      try {
+        targetEnabled = localStorage.getItem(TARGET_ENABLED_STORAGE_KEY) === '1';
+      } catch (err) {}
+      applyTargetSetting();
+    }
+
+    function setTargetEnabled(value) {
+      targetEnabled = value;
+      try { localStorage.setItem(TARGET_ENABLED_STORAGE_KEY, value ? '1' : '0'); } catch (err) {}
+      applyTargetSetting();
+    }
+
+    function applyTargetSetting() {
+      targetEnabledCheckbox.checked = targetEnabled;
+      targetExplainNote.classList.toggle('hidden', !targetEnabled);
+      addCibleRow.classList.toggle('hidden', !targetEnabled);
+      renderRosterManageList();
+      updateTargetHint();
+    }
+
+    function parseTargetMeters(value) {
+      const s = (value ?? '').toString().trim().replace(',', '.');
+      if (!s) return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function formatMeters(n) {
+      return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function updateTargetHint() {
+      const isIndividuel = raceMode === 'individuel';
+      if (!isIndividuel || !targetEnabled || starterSelect.value === MANUAL_OPTION || !starterSelect.value) {
+        targetHint.classList.add('hidden');
+        return;
+      }
+      const student = roster.find((s) => s.display === starterSelect.value);
+      if (!student || student.cible === null || student.cible === undefined) {
+        targetHint.classList.add('hidden');
+        return;
+      }
+      targetHint.textContent = `🎯 Cible : ${formatMeters(student.cible)} m`;
+      targetHint.classList.remove('hidden');
     }
 
     // ---- Notation de l'écart à la cible (plots), -10 à +10, via curseur ----
@@ -680,7 +759,7 @@
       saveGallery();
       renderEcartPanel();
       renderGallery({ keepSelection: true });
-      refreshAdminLiveViews();
+      refreshStatsLiveView();
     }
 
     ecartSlider.addEventListener('input', () => {
@@ -736,7 +815,7 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    // ---- Résultats par élève (Admin) ----
+    // ---- Résultats par élève (bouton Stats, accès libre) ----
 
     function computeResultsByStudent() {
       const map = new Map();
@@ -763,10 +842,10 @@
     function renderResultsTable() {
       const rows = computeResultsByStudent();
       if (!rows.length) {
-        resultsTableWrap.innerHTML = '<p class="note">Aucune tentative enregistrée pour le moment.</p>';
+        statsResultsWrap.innerHTML = '<p class="note">Aucune tentative enregistrée pour le moment.</p>';
         return;
       }
-      resultsTableWrap.innerHTML = `
+      statsResultsWrap.innerHTML = `
         <table class="results-table">
           <thead>
             <tr><th>Élève</th><th>Tentatives</th><th>Notées</th><th>Moyenne</th><th>Meilleur écart</th></tr>
@@ -786,10 +865,19 @@
       `;
     }
 
-    function refreshAdminLiveViews() {
-      if (adminUnlocked && !adminOverlay.classList.contains('hidden')) {
+    function refreshStatsLiveView() {
+      if (!statsOverlay.classList.contains('hidden')) {
         renderResultsTable();
       }
+    }
+
+    function openStats() {
+      statsOverlay.classList.remove('hidden');
+      renderResultsTable();
+    }
+
+    function closeStats() {
+      statsOverlay.classList.add('hidden');
     }
 
     // ---- Import de classe (Pronote : colonne A = Nom, colonne B = Prénom) ----
@@ -845,6 +933,19 @@
       return letters.length > 0 && letters === letters.toUpperCase() && letters !== letters.toLowerCase();
     }
 
+    // Colonne A qui a la forme "MARTIN Lucas" : un ou plusieurs mots en tête en MAJUSCULES
+    // suivis d'un mot qui ne l'est pas. Marche même quand la colonne B ne contient pas de date
+    // (par ex. quand elle contient une cible en mètres).
+    function looksLikeCombinedName(cell) {
+      const raw = (cell || '').toString().trim();
+      if (!raw) return false;
+      const tokens = raw.split(/\s+/);
+      if (tokens.length < 2) return false;
+      return isUpperToken(tokens[0]) && !isUpperToken(tokens[tokens.length - 1]);
+    }
+
+    function isUpperToken2(token) { return isUpperToken(token); }
+
     // Sépare "MARTIN Lucas", "DE LA FONTAINE Marie-Claire", etc. : le Nom est la suite de mots
     // en MAJUSCULES en tête, le Prénom est ce qui suit.
     function splitNomPrenom(fullValue) {
@@ -858,13 +959,15 @@
       return { nom: tokens.slice(0, i).join(' '), prenom: tokens.slice(i).join(' ') };
     }
 
-    function rowsToRoster(rows) {
+    function rowsToRoster(rows, options = {}) {
+      const { includeTarget = false } = options;
       let data = rows;
       if (data.length && looksLikeHeaderRow(data[0])) data = data.slice(1);
 
       const sample = data.slice(0, 15).filter((r) => (r[0] || '').toString().trim());
+      const nameShapeCount = sample.filter((r) => looksLikeCombinedName(r[0])).length;
       const dateLikeCount = sample.filter((r) => isDateLike(r[1])).length;
-      const combinedMode = sample.length > 0 && dateLikeCount / sample.length >= 0.5;
+      const combinedMode = sample.length > 0 && (nameShapeCount / sample.length >= 0.5 || dateLikeCount / sample.length >= 0.5);
 
       const students = [];
       data.forEach((cols) => {
@@ -878,7 +981,12 @@
           prenom = (cols[1] || '').toString().trim();
         }
         if (!nom && !prenom) return;
-        students.push({ id: makeId(), nom, prenom, display: displayName(nom, prenom) });
+        const student = { id: makeId(), nom, prenom, display: displayName(nom, prenom) };
+        if (includeTarget) {
+          const targetCol = combinedMode ? 1 : 2;
+          student.cible = parseTargetMeters(cols[targetCol]);
+        }
+        students.push(student);
       });
       students.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
       return { students, combinedMode };
@@ -931,11 +1039,15 @@
       rosterManageList.innerHTML = roster.map((s) => `
         <div class="roster-row">
           <span>${escapeHtml(s.display)}</span>
+          ${targetEnabled ? `<input type="text" inputmode="decimal" class="roster-target-input" data-id="${s.id}" value="${s.cible !== null && s.cible !== undefined ? String(s.cible).replace('.', ',') : ''}" placeholder="Cible (m)" />` : ''}
           <button type="button" class="danger roster-remove" data-id="${s.id}">Supprimer</button>
         </div>
       `).join('');
       rosterManageList.querySelectorAll('.roster-remove').forEach((btn) => {
         btn.addEventListener('click', () => removeStudent(btn.dataset.id));
+      });
+      rosterManageList.querySelectorAll('.roster-target-input').forEach((inp) => {
+        inp.addEventListener('change', () => updateStudentTarget(inp.dataset.id, inp.value));
       });
     }
 
@@ -980,11 +1092,13 @@
       setStatus('Classe effacée');
     }
 
-    function addStudent(nom, prenom) {
+    function addStudent(nom, prenom, cibleRaw) {
       const n = (nom || '').trim();
       const p = (prenom || '').trim();
       if (!n && !p) return;
-      roster.push({ id: makeId(), nom: n, prenom: p, display: displayName(n, p) });
+      const student = { id: makeId(), nom: n, prenom: p, display: displayName(n, p) };
+      if (targetEnabled) student.cible = parseTargetMeters(cibleRaw);
+      roster.push(student);
       roster.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
       populateEleveSelects();
       renderRosterStatus();
@@ -998,6 +1112,14 @@
       renderRosterStatus();
       renderRosterManageList();
       saveRoster();
+    }
+
+    function updateStudentTarget(id, rawValue) {
+      const s = roster.find((x) => x.id === id);
+      if (!s) return;
+      s.cible = parseTargetMeters(rawValue);
+      saveRoster();
+      updateTargetHint();
     }
 
     function reportImport(students, combinedMode) {
@@ -1025,13 +1147,13 @@
           // raw: false → les dates sont rendues en texte (ex. "12/05/2010") plutôt qu'en numéro de série Excel,
           // ce qui permet de détecter une colonne B "date de naissance".
           const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
-          const { students, combinedMode } = rowsToRoster(rows);
+          const { students, combinedMode } = rowsToRoster(rows, { includeTarget: targetEnabled });
           setRoster(students);
           reportImport(students, combinedMode);
         } else {
           const text = await file.text();
           const rows = parseDelimitedText(text);
-          const { students, combinedMode } = rowsToRoster(rows);
+          const { students, combinedMode } = rowsToRoster(rows, { includeTarget: targetEnabled });
           setRoster(students);
           reportImport(students, combinedMode);
         }
@@ -1057,7 +1179,6 @@
       const sec = clampSeconds(value);
       secondsInput.value = String(sec);
       if (secondsDisplay) secondsDisplay.textContent = `${sec}s`;
-      if (secondsReadoutMain) secondsReadoutMain.textContent = `${sec}s`;
       if (!countdownTimer) {
         remaining = sec;
         renderTime();
@@ -1108,6 +1229,12 @@
       if (navigator.vibrate) navigator.vibrate([80, 30, 80, 30, 80]);
     }
 
+    function syncCameraAdminUI() {
+      const active = !!stream;
+      btnCamera.classList.toggle('hidden', active);
+      cameraAdminNote.textContent = active ? 'Caméra active — prête pour les prises de vue.' : 'Caméra inactive.';
+    }
+
     async function startCamera() {
       stopCamera();
       try {
@@ -1132,6 +1259,8 @@
         setStatus('Accès caméra refusé ou indisponible');
         alert('Impossible d’accéder à la caméra arrière. Vérifie les permissions et utilise HTTPS ou une PWA installée.');
         console.error(err);
+      } finally {
+        syncCameraAdminUI();
       }
     }
 
@@ -1142,6 +1271,7 @@
       }
       video.srcObject = null;
       cameraState.textContent = 'Caméra inactive';
+      syncCameraAdminUI();
     }
 
     function stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, mode) {
@@ -1291,7 +1421,7 @@
       showPhoto(url, 0); // affiche la nouvelle capture et sélectionne l'écart à noter
       renderGallery({ keepSelection: true });
       saveGallery();
-      refreshAdminLiveViews();
+      refreshStatsLiveView();
     }
 
     function clearGallery() {
@@ -1308,7 +1438,7 @@
         localStorage.removeItem(GALLERY_STORAGE_KEY);
       } catch (err) {}
       renderEcartPanel();
-      refreshAdminLiveViews();
+      refreshStatsLiveView();
       setStatus('Galerie effacée');
     }
 
@@ -1357,7 +1487,7 @@
       stopCountdown();
       remaining = clampSeconds(secondsInput.value);
       renderTime();
-      setStatus('Décompte réinitialisé');
+      setStatus('Décompte remis à zéro');
     }
 
     async function startCountdown() {
@@ -1417,7 +1547,7 @@
       adminGate.classList.add('hidden');
       adminContent.classList.remove('hidden');
       renderRosterManageList();
-      renderResultsTable();
+      syncCameraAdminUI();
     }
 
     function lockAdmin() {
@@ -1431,11 +1561,16 @@
     btnAdminUnlock.addEventListener('click', tryUnlockAdmin);
     adminPinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlockAdmin(); });
     btnAdminLock.addEventListener('click', lockAdmin);
+    btnStats.addEventListener('click', openStats);
+    btnStatsClose.addEventListener('click', closeStats);
+    statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) closeStats(); });
     modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
+    targetEnabledCheckbox.addEventListener('change', () => setTargetEnabled(targetEnabledCheckbox.checked));
     btnAddStudent.addEventListener('click', () => {
-      addStudent(addNom.value, addPrenom.value);
+      addStudent(addNom.value, addPrenom.value, addCible.value);
       addNom.value = '';
       addPrenom.value = '';
+      addCible.value = '';
       addNom.focus();
     });
 
@@ -1454,15 +1589,17 @@
     btnExportCsv.addEventListener('click', exportCsv);
     classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
     btnClearRoster.addEventListener('click', clearRoster);
-    starterSelect.addEventListener('change', () => syncManualVisibility(starterSelect, starterManual));
+    starterSelect.addEventListener('change', () => { syncManualVisibility(starterSelect, starterManual); updateTargetHint(); });
     relayeurSelect.addEventListener('change', () => syncManualVisibility(relayeurSelect, relayeurManual));
     window.addEventListener('beforeunload', stopCamera);
 
     updateSeconds(12);
     loadRaceMode();
+    loadTargetSetting();
     loadGallery();
     renderEcartPanel();
     loadRoster();
+    syncCameraAdminUI();
     const versionTag = $('versionTag');
     if (versionTag) versionTag.textContent = `v${APP_VERSION}`;
 

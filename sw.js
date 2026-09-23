@@ -1,4 +1,4 @@
-const CACHE_NAME = 'relais-12s-v9';
+const CACHE_NAME = 'relais-12s-v11';
 const ASSETS = [
   './', './index.html', './manifest.json', './sw.js', './icon-square.png', './icon-192.png', './icon-512.png'
 ];
