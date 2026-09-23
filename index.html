@@ -94,7 +94,7 @@
     .row + .row { margin-top: 12px; }
     .field { display: grid; gap: 6px; width: 100%; }
     label { font-weight: 800; }
-    input[type="text"], select {
+    input[type="text"], input[type="password"], select {
       width: 100%;
       background: rgba(3,10,22,.88);
       color: var(--text);
@@ -163,6 +163,7 @@
     button.warn { background: linear-gradient(135deg, #d29812, #f2c94c); color: #13233f; box-shadow: 0 10px 20px rgba(242,201,76,.25); }
     button.danger { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 10px 20px rgba(239,68,68,.22); }
     button:disabled { opacity: .5; cursor: not-allowed; }
+    button.mode-btn.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); box-shadow: 0 10px 20px rgba(46,121,255,.33); }
     .timer {
       margin-top: 14px;
       padding: 16px;
@@ -240,30 +241,25 @@
     .thumb .meta { padding: 8px 10px; font-size: .84rem; color: var(--muted); line-height: 1.3; }
     .note { color: var(--muted); font-size: .94rem; line-height: 1.4; }
     .ecart-panel { margin-top: 16px; }
-    .ecart-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .ecart-btn {
-      appearance: none;
+    .ecart-slider-wrap { margin-top: 12px; }
+    input[type="range"]#ecartSlider {
+      width: 100%;
+      height: 10px;
       cursor: pointer;
-      border-radius: 14px;
-      padding: 12px 6px;
-      font-weight: 800;
-      font-size: .92rem;
-      border: 2px solid transparent;
-      background: rgba(255,255,255,.06);
-      color: var(--text);
     }
-    .ecart-btn:disabled { opacity: .35; cursor: not-allowed; }
-    .ecart-btn.neg { background: rgba(239,68,68,.16); color: #fca5a5; border-color: rgba(239,68,68,.38); }
-    .ecart-btn.neg.active { background: linear-gradient(135deg, #b91c1c, #ef4444); color: #fff; border-color: #fff; }
-    .ecart-btn.pos { background: rgba(34,197,94,.16); color: #86efac; border-color: rgba(34,197,94,.38); }
-    .ecart-btn.pos.active { background: linear-gradient(135deg, #139245, #22c55e); color: #fff; border-color: #fff; }
-    .ecart-btn.target { background: rgba(59,130,246,.16); color: #93c5fd; border-color: rgba(59,130,246,.38); }
-    .ecart-btn.target.active { background: linear-gradient(135deg, #1d63ff, #5ba1ff); color: #fff; border-color: #fff; }
+    input[type="range"]#ecartSlider:disabled { cursor: not-allowed; opacity: .4; }
+    .ecart-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .ecart-slider-value {
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 900;
+      margin-top: 12px;
+      min-height: 1.9rem;
+    }
     .ecart-tag { font-weight: 800; }
     .ecart-tag.neg { color: #f87171; }
     .ecart-tag.pos { color: #4ade80; }
@@ -295,6 +291,52 @@
       z-index: 20;
       pointer-events: none;
     }
+    .version-tag {
+      position: fixed;
+      left: 12px;
+      bottom: 10px;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: rgba(255,255,255,.55);
+      z-index: 20;
+      pointer-events: none;
+    }
+    .admin-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,16,.72);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 14px;
+      z-index: 60;
+      overflow-y: auto;
+    }
+    .admin-modal {
+      width: min(100%, 720px);
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+    }
+    .roster-manage-list { margin-top: 8px; }
+    .roster-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--card-border);
+      margin-top: 6px;
+    }
+    .roster-remove { min-height: 36px; padding: 6px 14px; font-size: .85rem; }
+    .results-table-wrap { overflow-x: auto; margin-top: 8px; }
+    table.results-table { width: 100%; border-collapse: collapse; font-size: .92rem; min-width: 480px; }
+    table.results-table th, table.results-table td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--card-border); }
+    table.results-table th { color: var(--muted); font-weight: 800; font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; }
+    table.results-table td.num { font-weight: 800; }
     @media (max-width: 640px) {
       .header { align-items: flex-start; flex-direction: column; }
       .top-actions { width: 100%; justify-content: stretch; }
@@ -314,7 +356,7 @@
       </div>
       <div class="top-actions">
         <button id="btnInstall" class="primary hidden" type="button">Installer l'application</button>
-        <button id="btnFullscreen" class="warn" type="button">Plein écran</button>
+        <button id="btnAdmin" class="secondary" type="button">🔒 Admin</button>
       </div>
     </div>
     <p id="updateBanner" class="note hidden" style="background:rgba(29,99,255,.16);border:1px solid rgba(93,161,255,.4);border-radius:14px;padding:10px 14px;margin:-4px 0 14px;">
@@ -323,33 +365,18 @@
     </p>
 
     <div class="grid">
-      <section class="card" id="rosterCard" style="grid-column: 1 / -1;">
-        <h2>Classe (import Pronote)</h2>
-        <div class="row">
-          <div class="field">
-            <label for="classFile">Fichier classe — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
-            <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
-          </div>
-        </div>
-        <div class="row">
-          <button id="btnClearRoster" class="secondary" type="button">Effacer la classe importée</button>
-        </div>
-        <p id="rosterStatus" class="note">Aucune classe importée. Les champs Démarreur/Relayeur ci-dessous permettent alors uniquement la saisie manuelle.</p>
-        <div id="rosterList" class="note" style="margin-top:8px;"></div>
-      </section>
-
       <section class="card">
-        <h2>Réglages</h2>
+        <h2>Coureurs</h2>
 
         <div class="row">
           <div class="field">
-            <label for="starterSelect">Démarreur</label>
+            <label id="starterLabel" for="starterSelect">Démarreur</label>
             <select id="starterSelect"><option value="">— Choisir dans la classe —</option></select>
             <input id="starterManual" type="text" placeholder="Prénom (saisie manuelle)" autocomplete="off" class="hidden" style="margin-top:8px;" />
           </div>
         </div>
 
-        <div class="row">
+        <div class="row" id="relayeurRow">
           <div class="field">
             <label for="relayeurSelect">Relayeur</label>
             <select id="relayeurSelect"><option value="">— Choisir dans la classe —</option></select>
@@ -359,13 +386,9 @@
 
         <div class="row">
           <div class="field">
-            <label>Temps du décompte</label>
-            <div class="stepper-row">
-              <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
-              <div id="secondsDisplay" class="seconds-display" aria-live="polite">12s</div>
-              <button id="btnPlus" class="success stepper-btn" type="button">+</button>
-            </div>
-            <input id="seconds" type="hidden" value="12" />
+            <label>Décompte</label>
+            <div id="secondsReadoutMain" class="seconds-display">12s</div>
+            <p class="note" style="margin:4px 0 0;">Réglable dans Admin.</p>
           </div>
         </div>
 
@@ -373,7 +396,6 @@
         <div class="row"><button id="btnStart" class="success full" type="button">Démarrer</button></div>
         <div class="row"><button id="btnReset" class="warn full" type="button">Réinitialiser le décompte</button></div>
         <div class="row"><button id="btnStop" class="danger full" type="button" disabled>Arrêter</button></div>
-        <div class="row"><button id="btnTestBeep" class="secondary full" type="button">Tester le bip</button></div>
 
         <div class="timer">
           <div>
@@ -402,7 +424,15 @@
         <div class="ecart-panel">
           <h2>Écart à la cible</h2>
           <p id="ecartHint" class="note">Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.</p>
-          <div id="ecartGrid" class="ecart-grid"></div>
+          <div class="ecart-slider-wrap">
+            <input id="ecartSlider" type="range" min="-10" max="10" step="1" value="0" disabled />
+            <div class="ecart-scale">
+              <span class="note">-10</span>
+              <span class="note">Cible</span>
+              <span class="note">+10</span>
+            </div>
+            <div id="ecartSliderValue" class="ecart-slider-value">—</div>
+          </div>
         </div>
 
         <div class="gallery">
@@ -422,7 +452,80 @@
     <div class="footer">PWA locale — fonctionne mieux en HTTPS ou après installation.</div>
   </div>
 
+  <div id="adminOverlay" class="admin-overlay hidden">
+    <div class="card admin-modal">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;">Administration</h2>
+        <button id="btnAdminClose" class="secondary" type="button">Fermer</button>
+      </div>
+
+      <div id="adminGate" style="margin-top:12px;">
+        <p class="note">Code administrateur requis.</p>
+        <div class="row">
+          <div class="field" style="max-width:220px;">
+            <input id="adminPinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Code à 4 chiffres" autocomplete="off" />
+          </div>
+          <button id="btnAdminUnlock" class="primary" type="button">Déverrouiller</button>
+        </div>
+        <p id="adminPinError" class="note hidden" style="color:#f87171;">Code incorrect.</p>
+      </div>
+
+      <div id="adminContent" class="hidden" style="margin-top:12px;">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <span class="note">Session administrateur déverrouillée</span>
+          <button id="btnAdminLock" class="secondary" type="button">🔒 Verrouiller</button>
+        </div>
+
+        <h2 style="margin-top:20px;">Mode de course</h2>
+        <div class="row">
+          <button type="button" class="secondary mode-btn full" data-mode="relais" style="flex:1;">Relais (démarreur + relayeur)</button>
+          <button type="button" class="secondary mode-btn full" data-mode="individuel" style="flex:1;">Individuel (coureur seul)</button>
+        </div>
+
+        <h2 style="margin-top:20px;">Temps du décompte</h2>
+        <div class="stepper-row">
+          <button id="btnMinus" class="danger stepper-btn" type="button">−</button>
+          <div id="secondsDisplay" class="seconds-display" aria-live="polite">12s</div>
+          <button id="btnPlus" class="success stepper-btn" type="button">+</button>
+        </div>
+        <input id="seconds" type="hidden" value="12" />
+
+        <h2 style="margin-top:20px;">Classe (import Pronote)</h2>
+        <div class="row">
+          <div class="field">
+            <label for="classFile">Fichier classe — CSV/Excel Pronote (colonne A : Nom, colonne B : Prénom)</label>
+            <input id="classFile" type="file" accept=".csv,.txt,.tsv,.xlsx" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="btnClearRoster" class="secondary" type="button">Effacer la classe importée</button>
+        </div>
+        <p id="rosterStatus" class="note">Aucune classe importée.</p>
+
+        <h2 style="margin-top:20px;">Ajouter un élève</h2>
+        <div class="row">
+          <div class="field">
+            <label for="addNom">Nom</label>
+            <input id="addNom" type="text" placeholder="Ex. Martin" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="addPrenom">Prénom</label>
+            <input id="addPrenom" type="text" placeholder="Ex. Lucas" autocomplete="off" />
+          </div>
+        </div>
+        <div class="row"><button id="btnAddStudent" class="success full" type="button">Ajouter à la classe</button></div>
+
+        <h2 style="margin-top:20px;">Élèves de la classe (<span id="rosterCount">0</span>)</h2>
+        <div id="rosterManageList" class="roster-manage-list"></div>
+
+        <h2 style="margin-top:20px;">Résultats par élève</h2>
+        <div id="resultsTableWrap" class="results-table-wrap"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="signature">by Quentin Delisle</div>
+  <div id="versionTag" class="version-tag"></div>
 
   <!-- Lecture des fichiers Excel (.xlsx) pour l'import de classe. Nécessite une connexion internet
        au moment de l'import uniquement (le CSV, lui, fonctionne toujours hors-ligne). -->
@@ -431,8 +534,11 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const secondsInput = $('seconds');
+    const secondsReadoutMain = $('secondsReadoutMain');
+    const starterLabel = $('starterLabel');
     const starterSelect = $('starterSelect');
     const starterManual = $('starterManual');
+    const relayeurRow = $('relayeurRow');
     const relayeurSelect = $('relayeurSelect');
     const relayeurManual = $('relayeurManual');
     const btnCamera = $('btnCamera');
@@ -442,8 +548,6 @@
     const btnPlus = $('btnPlus');
     const secondsDisplay = $('secondsDisplay');
     const btnStop = $('btnStop');
-    const btnTestBeep = $('btnTestBeep');
-    const btnFullscreen = $('btnFullscreen');
     const btnClearGallery = $('btnClearGallery');
     const timeDisplay = $('timeDisplay');
     const statusEl = $('status');
@@ -456,14 +560,32 @@
     const classFile = $('classFile');
     const btnClearRoster = $('btnClearRoster');
     const rosterStatus = $('rosterStatus');
-    const rosterList = $('rosterList');
-    const ecartGrid = $('ecartGrid');
+    const rosterCount = $('rosterCount');
+    const rosterManageList = $('rosterManageList');
+    const ecartSlider = $('ecartSlider');
+    const ecartSliderValue = $('ecartSliderValue');
     const ecartHint = $('ecartHint');
     const btnExportCsv = $('btnExportCsv');
     const btnInstall = $('btnInstall');
     const updateBanner = $('updateBanner');
     const btnUpdateReload = $('btnUpdateReload');
+    const btnAdmin = $('btnAdmin');
+    const adminOverlay = $('adminOverlay');
+    const btnAdminClose = $('btnAdminClose');
+    const adminGate = $('adminGate');
+    const adminContent = $('adminContent');
+    const adminPinInput = $('adminPinInput');
+    const adminPinError = $('adminPinError');
+    const btnAdminUnlock = $('btnAdminUnlock');
+    const btnAdminLock = $('btnAdminLock');
+    const modeButtons = Array.from(document.querySelectorAll('.mode-btn'));
+    const addNom = $('addNom');
+    const addPrenom = $('addPrenom');
+    const btnAddStudent = $('btnAddStudent');
+    const resultsTableWrap = $('resultsTableWrap');
     const MANUAL_OPTION = '__manual__';
+    const ADMIN_CODE = '0000';
+    const APP_VERSION = '1.6.0';
 
     let stream = null;
     let countdownTimer = null;
@@ -473,19 +595,49 @@
     let photoIndex = 0;
     let galleryItems = [];
     let currentAttemptIndex = -1;
+    let adminUnlocked = false;
     const GALLERY_STORAGE_KEY = 'relais12s_gallery_v2';
     const ROSTER_STORAGE_KEY = 'relais12s_roster_v1';
-    const MAX_GALLERY_ITEMS = 24;
+    const MODE_STORAGE_KEY = 'relais12s_mode_v1';
+    const MAX_GALLERY_ITEMS = 200;
     const MIN_SECONDS = 1;
     const MAX_SECONDS = 3600;
-    const ECART_VALUES = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
     let roster = [];
+    let raceMode = 'relais';
 
-    // ---- Notation de l'écart à la cible (plots) ----
+    // ---- Mode de course : relais (démarreur + relayeur) ou individuel (coureur seul) ----
+
+    function loadRaceMode() {
+      try {
+        const v = localStorage.getItem(MODE_STORAGE_KEY);
+        if (v === 'relais' || v === 'individuel') raceMode = v;
+      } catch (err) {}
+      applyRaceMode();
+    }
+
+    function setRaceMode(mode) {
+      raceMode = mode;
+      try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch (err) {}
+      applyRaceMode();
+    }
+
+    function applyRaceMode() {
+      const isIndividuel = raceMode === 'individuel';
+      relayeurRow.classList.toggle('hidden', isIndividuel);
+      starterLabel.textContent = isIndividuel ? 'Coureur' : 'Démarreur';
+      modeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === raceMode));
+    }
+
+    // ---- Notation de l'écart à la cible (plots), -10 à +10, via curseur ----
 
     function ecartKind(value) {
       if (value === 0) return 'target';
       return value < 0 ? 'neg' : 'pos';
+    }
+
+    function ecartColor(value) {
+      if (value === 0) return '#5ba1ff';
+      return value < 0 ? '#ef4444' : '#22c55e';
     }
 
     function ecartLabel(value) {
@@ -496,33 +648,29 @@
       return `${sign}${abs} plot${abs > 1 ? 's' : ''}`;
     }
 
-    function buildEcartButtons() {
-      ecartGrid.innerHTML = ECART_VALUES.map((v) => {
-        const kind = ecartKind(v);
-        const label = v === 0 ? 'Cible atteinte' : (v > 0 ? `+${v}` : `${v}`);
-        return `<button type="button" class="ecart-btn ${kind}" data-value="${v}">${label}</button>`;
-      }).join('');
-      ecartGrid.querySelectorAll('.ecart-btn').forEach((btn) => {
-        btn.addEventListener('click', () => setEcart(Number(btn.dataset.value)));
-      });
+    function participantsLabel(meta) {
+      if (meta.mode === 'individuel') return meta.starter || '';
+      return [meta.starter, meta.relayeur].filter(Boolean).join(' → ');
     }
 
     function renderEcartPanel() {
       const hasAttempt = currentAttemptIndex >= 0 && galleryItems[currentAttemptIndex];
-      const currentValue = hasAttempt ? galleryItems[currentAttemptIndex].meta.ecart : null;
-      ecartGrid.querySelectorAll('.ecart-btn').forEach((btn) => {
-        btn.disabled = !hasAttempt;
-        const v = Number(btn.dataset.value);
-        btn.classList.toggle('active', hasAttempt && currentValue === v);
-      });
+      const item = hasAttempt ? galleryItems[currentAttemptIndex] : null;
+      const noted = hasAttempt && item.meta.ecart !== null && item.meta.ecart !== undefined;
+      const currentValue = noted ? item.meta.ecart : 0;
+
+      ecartSlider.disabled = !hasAttempt;
+      ecartSlider.value = String(currentValue);
+      const color = hasAttempt ? ecartColor(currentValue) : '#5d6f90';
+      ecartSlider.style.accentColor = color;
+      ecartSliderValue.style.color = hasAttempt ? color : 'var(--muted)';
+      ecartSliderValue.textContent = hasAttempt ? (noted ? ecartLabel(currentValue) : 'Non noté — glisse le curseur') : '—';
+
       if (!hasAttempt) {
         ecartHint.textContent = "Capture une photo pour pouvoir noter l'écart de la photo affichée ci-dessus.";
       } else {
-        const item = galleryItems[currentAttemptIndex];
-        const who = [item.meta.starter, item.meta.relayeur].filter(Boolean).join(' → ');
-        ecartHint.textContent = who
-          ? `Notation en cours pour : ${who} — ${ecartLabel(currentValue)}`
-          : `Notation en cours — ${ecartLabel(currentValue)}`;
+        const who = participantsLabel(item.meta);
+        ecartHint.textContent = who ? `Notation en cours pour : ${who}` : 'Notation en cours';
       }
     }
 
@@ -532,7 +680,17 @@
       saveGallery();
       renderEcartPanel();
       renderGallery({ keepSelection: true });
+      refreshAdminLiveViews();
     }
+
+    ecartSlider.addEventListener('input', () => {
+      const v = Number(ecartSlider.value);
+      const color = ecartColor(v);
+      ecartSlider.style.accentColor = color;
+      ecartSliderValue.style.color = color;
+      ecartSliderValue.textContent = ecartLabel(v);
+    });
+    ecartSlider.addEventListener('change', () => setEcart(Number(ecartSlider.value)));
 
     function csvEscape(value) {
       const s = String(value ?? '');
@@ -544,7 +702,7 @@
         alert('Aucune tentative à exporter pour le moment.');
         return;
       }
-      const header = ['Date', 'Heure', 'Démarreur', 'Relayeur', 'Décompte (s)', 'Écart (plots)', 'Résultat'];
+      const header = ['Date', 'Heure', 'Mode', 'Coureur(s)', 'Décompte (s)', 'Écart (plots)', 'Résultat'];
       const rows = galleryItems
         .slice()
         .reverse() // ordre chronologique dans l'export
@@ -557,8 +715,8 @@
           return [
             dateStr,
             timeStr,
-            item.meta.starter || '',
-            item.meta.relayeur || '',
+            item.meta.mode === 'individuel' ? 'Individuel' : 'Relais',
+            participantsLabel(item.meta),
             item.meta.duration != null ? item.meta.duration : '',
             ecartNum,
             ecartLabel(ecart),
@@ -578,6 +736,62 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    // ---- Résultats par élève (Admin) ----
+
+    function computeResultsByStudent() {
+      const map = new Map();
+      galleryItems.forEach((item) => {
+        const m = item.meta;
+        const participants = m.mode === 'individuel' ? [m.starter] : [m.starter, m.relayeur];
+        participants.filter(Boolean).forEach((name) => {
+          if (!map.has(name)) map.set(name, { count: 0, ecarts: [] });
+          const entry = map.get(name);
+          entry.count += 1;
+          if (m.ecart !== null && m.ecart !== undefined) entry.ecarts.push(m.ecart);
+        });
+      });
+      return Array.from(map.entries())
+        .map(([name, data]) => {
+          const noted = data.ecarts.length;
+          const avg = noted ? data.ecarts.reduce((a, b) => a + b, 0) / noted : null;
+          const best = noted ? data.ecarts.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a)) : null;
+          return { name, count: data.count, noted, avg, best };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    }
+
+    function renderResultsTable() {
+      const rows = computeResultsByStudent();
+      if (!rows.length) {
+        resultsTableWrap.innerHTML = '<p class="note">Aucune tentative enregistrée pour le moment.</p>';
+        return;
+      }
+      resultsTableWrap.innerHTML = `
+        <table class="results-table">
+          <thead>
+            <tr><th>Élève</th><th>Tentatives</th><th>Notées</th><th>Moyenne</th><th>Meilleur écart</th></tr>
+          </thead>
+          <tbody>
+            ${rows.map((r) => `
+              <tr>
+                <td>${escapeHtml(r.name)}</td>
+                <td class="num">${r.count}</td>
+                <td class="num">${r.noted}</td>
+                <td class="num">${r.avg === null ? '—' : (r.avg > 0 ? '+' : '') + r.avg.toFixed(1)}</td>
+                <td class="num">${r.best === null ? '—' : ecartLabel(r.best)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function refreshAdminLiveViews() {
+      if (adminUnlocked && !adminOverlay.classList.contains('hidden')) {
+        renderResultsTable();
+      }
+    }
+
     // ---- Import de classe (Pronote : colonne A = Nom, colonne B = Prénom) ----
 
     function displayName(nom, prenom) {
@@ -586,6 +800,11 @@
       const initiale = n ? n.charAt(0).toUpperCase() : '';
       if (p && initiale) return `${p} ${initiale}.`;
       return p || n || '';
+    }
+
+    function makeId() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     }
 
     function detectDelimiter(firstLine) {
@@ -659,7 +878,7 @@
           prenom = (cols[1] || '').toString().trim();
         }
         if (!nom && !prenom) return;
-        students.push({ nom, prenom, display: displayName(nom, prenom) });
+        students.push({ id: makeId(), nom, prenom, display: displayName(nom, prenom) });
       });
       students.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
       return { students, combinedMode };
@@ -669,8 +888,8 @@
       return (str || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // Remplit les deux molettes (Démarreur / Relayeur) avec la classe importée + une option
-    // de saisie manuelle, en conservant la sélection en cours si elle existe toujours.
+    // Remplit les deux molettes (Démarreur/Coureur / Relayeur) avec la classe importée + une
+    // option de saisie manuelle, en conservant la sélection en cours si elle existe toujours.
     function populateEleveSelects() {
       [starterSelect, relayeurSelect].forEach((select) => {
         const previous = select.value;
@@ -696,13 +915,28 @@
     }
 
     function renderRosterStatus() {
+      rosterCount.textContent = String(roster.length);
       if (!roster.length) {
-        rosterStatus.textContent = 'Aucune classe importée. Les champs Démarreur/Relayeur ci-dessous permettent alors uniquement la saisie manuelle.';
-        rosterList.textContent = '';
+        rosterStatus.textContent = 'Aucune classe importée. Les champs Démarreur/Relayeur (ou Coureur) permettent alors uniquement la saisie manuelle.';
         return;
       }
-      rosterStatus.textContent = `${roster.length} élève(s) importé(s) — utilise les molettes Démarreur/Relayeur, ou « Saisie manuelle » en cas de changement.`;
-      rosterList.textContent = roster.map((s) => s.display).join(' · ');
+      rosterStatus.textContent = `${roster.length} élève(s) dans la classe.`;
+    }
+
+    function renderRosterManageList() {
+      if (!roster.length) {
+        rosterManageList.innerHTML = '<p class="note">Aucun élève dans la classe.</p>';
+        return;
+      }
+      rosterManageList.innerHTML = roster.map((s) => `
+        <div class="roster-row">
+          <span>${escapeHtml(s.display)}</span>
+          <button type="button" class="danger roster-remove" data-id="${s.id}">Supprimer</button>
+        </div>
+      `).join('');
+      rosterManageList.querySelectorAll('.roster-remove').forEach((btn) => {
+        btn.addEventListener('click', () => removeStudent(btn.dataset.id));
+      });
     }
 
     function saveRoster() {
@@ -718,7 +952,7 @@
         const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) roster = parsed;
+          if (Array.isArray(parsed)) roster = parsed.map((s) => ({ id: s.id || makeId(), ...s }));
         }
       } catch (err) {
         console.warn('Impossible de charger la classe', err);
@@ -732,6 +966,7 @@
       roster = students;
       populateEleveSelects();
       renderRosterStatus();
+      renderRosterManageList();
       saveRoster();
     }
 
@@ -740,8 +975,29 @@
       try { localStorage.removeItem(ROSTER_STORAGE_KEY); } catch (err) {}
       populateEleveSelects();
       renderRosterStatus();
+      renderRosterManageList();
       classFile.value = '';
       setStatus('Classe effacée');
+    }
+
+    function addStudent(nom, prenom) {
+      const n = (nom || '').trim();
+      const p = (prenom || '').trim();
+      if (!n && !p) return;
+      roster.push({ id: makeId(), nom: n, prenom: p, display: displayName(n, p) });
+      roster.sort((a, b) => a.display.localeCompare(b.display, 'fr'));
+      populateEleveSelects();
+      renderRosterStatus();
+      renderRosterManageList();
+      saveRoster();
+    }
+
+    function removeStudent(id) {
+      roster = roster.filter((s) => s.id !== id);
+      populateEleveSelects();
+      renderRosterStatus();
+      renderRosterManageList();
+      saveRoster();
     }
 
     function reportImport(students, combinedMode) {
@@ -801,6 +1057,7 @@
       const sec = clampSeconds(value);
       secondsInput.value = String(sec);
       if (secondsDisplay) secondsDisplay.textContent = `${sec}s`;
+      if (secondsReadoutMain) secondsReadoutMain.textContent = `${sec}s`;
       if (!countdownTimer) {
         remaining = sec;
         renderTime();
@@ -887,17 +1144,20 @@
       cameraState.textContent = 'Caméra inactive';
     }
 
-    function stampPhoto(sourceCanvas, durationSeconds, starter, relayeur) {
+    function stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, mode) {
       const out = document.createElement('canvas');
       out.width = sourceCanvas.width;
       out.height = sourceCanvas.height;
       const ctx = out.getContext('2d');
       ctx.drawImage(sourceCanvas, 0, 0);
 
+      const isIndividuel = mode === 'individuel';
+      const lineCount = isIndividuel ? 3 : 4; // titre + décompte + coureur(s)
+
       const pad = Math.max(18, Math.round(out.width * 0.018));
       const panelW = Math.min(out.width * 0.84, 900);
       const lineH = Math.max(34, Math.round(out.height * 0.052));
-      const panelH = lineH * 4 + pad * 1.4;
+      const panelH = lineH * lineCount + pad * 1.4;
       const x = pad;
       const y = out.height - panelH - pad;
       const radius = Math.max(18, Math.round(out.width * 0.018));
@@ -926,13 +1186,22 @@
       ctx.fillText('PHOTO FINISH', x + pad, y + pad + titleSize);
 
       ctx.font = `700 ${textSize}px system-ui, Arial, sans-serif`;
-      ctx.fillText(`Décompte : ${durationSeconds}s`, x + pad, y + pad + titleSize + lineH);
-      ctx.fillText(`Démarreur : ${starter || '—'}`, x + pad, y + pad + titleSize + lineH * 2);
-      ctx.fillText(`Relayeur : ${relayeur || '—'}`, x + pad, y + pad + titleSize + lineH * 3);
+      let lineIndex = 1;
+      ctx.fillText(`Décompte : ${durationSeconds}s`, x + pad, y + pad + titleSize + lineH * lineIndex);
+      lineIndex += 1;
+      if (isIndividuel) {
+        ctx.fillText(`Coureur : ${starter || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
+        lineIndex += 1;
+      } else {
+        ctx.fillText(`Démarreur : ${starter || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
+        lineIndex += 1;
+        ctx.fillText(`Relayeur : ${relayeur || '—'}`, x + pad, y + pad + titleSize + lineH * lineIndex);
+        lineIndex += 1;
+      }
 
       ctx.textAlign = 'right';
       ctx.fillStyle = '#d6e7ff';
-      ctx.fillText(new Date().toLocaleString('fr-FR'), x + panelW - pad, y + pad + titleSize + lineH * 3);
+      ctx.fillText(new Date().toLocaleString('fr-FR'), x + panelW - pad, y + pad + titleSize + lineH * (lineIndex - 1));
       ctx.textAlign = 'left';
 
       return out;
@@ -955,6 +1224,7 @@
         const ecart = item.meta.ecart;
         const hasEcart = ecart !== null && ecart !== undefined;
         const kind = hasEcart ? ecartKind(ecart) : 'none';
+        const isIndividuel = item.meta.mode === 'individuel';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'thumb';
@@ -962,8 +1232,9 @@
           <img src="${item.url}" alt="Photo finish ${index + 1}" />
           <div class="meta">
             <div><strong>${item.meta.duration}s</strong> — <span class="ecart-tag ${kind}">${ecartLabel(ecart)}</span></div>
-            <div>Démarreur : ${item.meta.starter || '—'}</div>
-            <div>Relayeur : ${item.meta.relayeur || '—'}</div>
+            ${isIndividuel
+              ? `<div>Coureur : ${escapeHtml(item.meta.starter) || '—'}</div>`
+              : `<div>Démarreur : ${escapeHtml(item.meta.starter) || '—'}</div><div>Relayeur : ${escapeHtml(item.meta.relayeur) || '—'}</div>`}
           </div>
         `;
         btn.addEventListener('click', () => showPhoto(item.url, index));
@@ -998,7 +1269,14 @@
           galleryItems = parsed
             .filter(item => item && typeof item.url === 'string' && item.meta)
             .slice(0, MAX_GALLERY_ITEMS)
-            .map(item => ({ ...item, meta: { ecart: null, ...item.meta } }));
+            .map(item => ({
+              ...item,
+              meta: {
+                ecart: null,
+                mode: item.meta.relayeur ? 'relais' : 'individuel',
+                ...item.meta,
+              },
+            }));
         }
       } catch (err) {
         console.warn('Impossible de charger la galerie', err);
@@ -1013,6 +1291,7 @@
       showPhoto(url, 0); // affiche la nouvelle capture et sélectionne l'écart à noter
       renderGallery({ keepSelection: true });
       saveGallery();
+      refreshAdminLiveViews();
     }
 
     function clearGallery() {
@@ -1029,6 +1308,7 @@
         localStorage.removeItem(GALLERY_STORAGE_KEY);
       } catch (err) {}
       renderEcartPanel();
+      refreshAdminLiveViews();
       setStatus('Galerie effacée');
     }
 
@@ -1048,13 +1328,13 @@
         sourceCanvas.getContext('2d').drawImage(video, 0, 0, w, h);
 
         const starter = getSelectedName(starterSelect, starterManual);
-        const relayeur = getSelectedName(relayeurSelect, relayeurManual);
+        const relayeur = raceMode === 'individuel' ? '' : getSelectedName(relayeurSelect, relayeurManual);
         const durationSeconds = clampSeconds(secondsInput.value);
-        const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur);
+        const stampedCanvas = stampPhoto(sourceCanvas, durationSeconds, starter, relayeur, raceMode);
         const url = stampedCanvas.toDataURL('image/jpeg', 0.92);
 
         photoIndex += 1;
-        addToGallery(url, { duration: durationSeconds, starter, relayeur, ecart: null, createdAt: new Date().toISOString() });
+        addToGallery(url, { mode: raceMode, duration: durationSeconds, starter, relayeur, ecart: null, createdAt: new Date().toISOString() });
         setStatus('Photo capturée — note l’écart à la cible ci-dessous');
       } catch (err) {
         console.error(err);
@@ -1102,17 +1382,62 @@
       }, 1000);
     }
 
-    async function toggleFullscreen() {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        } else {
-          await document.exitFullscreen();
-        }
-      } catch (err) {
-        console.warn('Plein écran non disponible', err);
+    // ---- Interface Admin (code 0000 par défaut) ----
+
+    function openAdmin() {
+      adminOverlay.classList.remove('hidden');
+      adminPinInput.value = '';
+      adminPinError.classList.add('hidden');
+      if (adminUnlocked) {
+        showAdminContent();
+      } else {
+        adminGate.classList.remove('hidden');
+        adminContent.classList.add('hidden');
+        adminPinInput.focus();
       }
     }
+
+    function closeAdmin() {
+      adminOverlay.classList.add('hidden');
+    }
+
+    function tryUnlockAdmin() {
+      if (adminPinInput.value === ADMIN_CODE) {
+        adminUnlocked = true;
+        adminPinError.classList.add('hidden');
+        showAdminContent();
+      } else {
+        adminPinError.classList.remove('hidden');
+        adminPinInput.value = '';
+        adminPinInput.focus();
+      }
+    }
+
+    function showAdminContent() {
+      adminGate.classList.add('hidden');
+      adminContent.classList.remove('hidden');
+      renderRosterManageList();
+      renderResultsTable();
+    }
+
+    function lockAdmin() {
+      adminUnlocked = false;
+      closeAdmin();
+    }
+
+    btnAdmin.addEventListener('click', openAdmin);
+    btnAdminClose.addEventListener('click', closeAdmin);
+    adminOverlay.addEventListener('click', (e) => { if (e.target === adminOverlay) closeAdmin(); });
+    btnAdminUnlock.addEventListener('click', tryUnlockAdmin);
+    adminPinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlockAdmin(); });
+    btnAdminLock.addEventListener('click', lockAdmin);
+    modeButtons.forEach((btn) => btn.addEventListener('click', () => setRaceMode(btn.dataset.mode)));
+    btnAddStudent.addEventListener('click', () => {
+      addStudent(addNom.value, addPrenom.value);
+      addNom.value = '';
+      addPrenom.value = '';
+      addNom.focus();
+    });
 
     btnMinus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) - 1));
     btnPlus.addEventListener('click', () => updateSeconds(Number(secondsInput.value || 12) + 1));
@@ -1125,8 +1450,6 @@
       renderTime();
     });
     btnReset.addEventListener('click', resetCountdown);
-    btnTestBeep.addEventListener('click', strongBeepPattern);
-    btnFullscreen.addEventListener('click', toggleFullscreen);
     btnClearGallery.addEventListener('click', clearGallery);
     btnExportCsv.addEventListener('click', exportCsv);
     classFile.addEventListener('change', (e) => handleClassFile(e.target.files && e.target.files[0]));
@@ -1136,10 +1459,12 @@
     window.addEventListener('beforeunload', stopCamera);
 
     updateSeconds(12);
-    buildEcartButtons();
+    loadRaceMode();
     loadGallery();
     renderEcartPanel();
     loadRoster();
+    const versionTag = $('versionTag');
+    if (versionTag) versionTag.textContent = `v${APP_VERSION}`;
 
     // ---- Installation et mise à jour de la PWA ----
 
